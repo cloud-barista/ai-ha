@@ -1,0 +1,922 @@
+basePath: /aiha
+definitions:
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInventoryReq:
+    properties:
+      architecture:
+        example: x86_64
+        maxLength: 64
+        type: string
+      collectedAt:
+        description: |-
+          CollectedAt is when the agent read the system, which is not when the
+          framework heard about it. Backup targets chosen from a stale inventory
+          can name a partition that no longer exists.
+        example: "2026-09-18T04:05:06Z"
+        type: string
+      complete:
+        description: |-
+          Complete is false when the agent could not account for every filesystem
+          the system needs. Backup targets are not chosen automatically from an
+          inventory that says so.
+        example: true
+        type: boolean
+      firmware:
+        example: uefi
+        maxLength: 16
+        type: string
+      incompleteReason:
+        description: IncompleteReason explains Complete being false, in an operator's
+          terms.
+        maxLength: 1024
+        type: string
+      kernelRelease:
+        example: 6.8.0-45-generic
+        maxLength: 256
+        type: string
+      missing:
+        description: Missing names the filesystems that were unaccounted for, e.g.
+          "/boot/efi".
+        items:
+          type: string
+        maxItems: 64
+        type: array
+      osId:
+        example: ubuntu
+        maxLength: 64
+        type: string
+      osVersionId:
+        example: "24.04"
+        maxLength: 64
+        type: string
+      partitions:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.InventoryPartition'
+        maxItems: 128
+        minItems: 1
+        type: array
+    required:
+    - collectedAt
+    - partitions
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJob:
+    properties:
+      jobId:
+        example: 5e6f70819a0b1c2d
+        type: string
+      kind:
+        example: backup
+        type: string
+      spec:
+        description: Spec is what to do, passed through as the job was created.
+        type: object
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobClaimReq:
+    properties:
+      claimRequestKey:
+        description: |-
+          ClaimRequestKey scopes idempotency to this one request. A retry reuses
+          it; a stale request with a different key cannot join a newer attempt.
+          32 hexadecimal digits.
+        example: 8b1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f
+        type: string
+    required:
+    - claimRequestKey
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobClaimResp:
+    properties:
+      attemptId:
+        example: 7a8b9c0d1e2f3a4b
+        type: string
+      jobId:
+        example: 5e6f70819a0b1c2d
+        type: string
+      leaseSeconds:
+        example: 90
+        type: integer
+      leaseToken:
+        description: |-
+          LeaseToken proves this attempt is current. Every report carries it. It
+          is returned only here.
+        example: <lease-token>
+        type: string
+      progressIntervalSeconds:
+        description: |-
+          ProgressIntervalSeconds is how often to report, whether or not the work
+          has advanced. LeaseSeconds is how long a report buys. They are sent here
+          rather than compiled into the agent so that they can be tuned without
+          redeploying.
+        example: 10
+        type: integer
+      repository:
+        allOf:
+        - $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryAccess'
+        description: |-
+          Repository is where the job writes, with the credentials to do so. It is
+          sent only in this response and stored nowhere with the job.
+      spec:
+        type: object
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobProgressReq:
+    properties:
+      advanced:
+        description: |-
+          Advanced says whether the work moved since the last report. A report
+          that only proves the agent is alive sets it false, which keeps an agent
+          that is up but stuck distinguishable from one that is gone.
+        example: true
+        type: boolean
+      attemptId:
+        example: 7a8b9c0d1e2f3a4b
+        type: string
+      leaseToken:
+        example: <lease-token>
+        type: string
+      phase:
+        example: archiving
+        type: string
+      processedBytes:
+        description: ProcessedBytes is how much has been uploaded so far.
+        example: 1048576
+        type: integer
+      seq:
+        description: Seq orders reports within an attempt. An older one is ignored.
+        example: 3
+        minimum: 1
+        type: integer
+    required:
+    - attemptId
+    - leaseToken
+    - seq
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobProgressResp:
+    properties:
+      cancelRequested:
+        description: |-
+          CancelRequested tells the agent to stop. There is no inbound path to an
+          agent, so this is the only way a cancel can reach it.
+        example: false
+        type: boolean
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobResultReq:
+    properties:
+      attemptId:
+        example: 7a8b9c0d1e2f3a4b
+        type: string
+      detail:
+        description: Detail is what the attempt produced, recorded as reported.
+        type: object
+      leaseToken:
+        example: <lease-token>
+        type: string
+      message:
+        example: Backup set 9c0d1e2f3a4b5c6d captured
+        type: string
+      outcome:
+        description: Outcome is completed, failed or cancelled.
+        enum:
+        - completed
+        - failed
+        - cancelled
+        example: completed
+        type: string
+    required:
+    - attemptId
+    - leaseToken
+    - outcome
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentRegisterReq:
+    properties:
+      agentVersion:
+        example: aiha-agent 0.1.0
+        type: string
+      hostname:
+        description: Hostname and AgentVersion are recorded for display and diagnosis.
+        example: web01
+        type: string
+      registrationKey:
+        description: |-
+          RegistrationKey identifies this enrolment attempt. A retry reuses it so
+          that the framework recognises a repeat instead of enrolling a second
+          agent. 32 hexadecimal digits.
+        example: 3f2a9c1e6b7d4a805e1f9c2d8b0a7e63
+        type: string
+      registrationToken:
+        description: |-
+          RegistrationToken authorizes the enrolment. It is spent by a successful
+          registration and authorizes nothing else: it cannot receive work.
+        example: <registration-token>
+        type: string
+      systemId:
+        description: |-
+          SystemID is the machine this agent protects. The agent proposes it; what
+          makes the enrolment legitimate is the registration token, never this.
+        example: 1a2b3c4d5e6f7081
+        type: string
+    required:
+    - registrationKey
+    - registrationToken
+    - systemId
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentRegisterResp:
+    properties:
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      agentToken:
+        description: AgentToken authenticates every later request, as a bearer token.
+        example: <agent-token>
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.InventoryPartition:
+    properties:
+      candidate:
+        description: |-
+          Candidate says this partition is included when backup targets are chosen
+          automatically. Selectable says it may be named by hand. They differ: a
+          partition can be selectable without being a candidate, while one that is
+          not selectable cannot be captured at all and is refused even when asked
+          for by name.
+        type: boolean
+      devNo:
+        example: "259:1"
+        maxLength: 32
+        type: string
+      device:
+        description: |-
+          Device is the canonical device path. It is resolved from the mount's
+          device number rather than copied from the mount table, whose source name
+          can be an alias ("/dev/root" on cloud images) that cannot be backed up.
+          It is empty when the path could not be resolved, which is why it is not
+          required: a partition that is present but unreadable reads very
+          differently from one that is absent.
+        example: /dev/nvme0n1p1
+        maxLength: 4096
+        type: string
+      fsSizeBytes:
+        description: |-
+          FSSizeBytes and FSUsedBytes are the filesystem's size and usage, not the
+          device's. Null means the value could not be determined, which is not the
+          same as a filesystem that is empty.
+        example: 8298131456
+        type: integer
+      fsType:
+        example: ext4
+        maxLength: 64
+        type: string
+      fsUsedBytes:
+        example: 2147483648
+        type: integer
+      fsUuid:
+        example: 11111111-2222-3333-4444-555555555555
+        maxLength: 128
+        type: string
+      label:
+        maxLength: 256
+        type: string
+      mountPoint:
+        example: /
+        maxLength: 4096
+        type: string
+      partUuid:
+        maxLength: 128
+        type: string
+      reason:
+        description: Reason explains a false in either flag, in an operator's terms.
+        maxLength: 512
+        type: string
+      selectable:
+        type: boolean
+    required:
+    - mountPoint
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryAccess:
+    properties:
+      accessKey:
+        example: <access-key>
+        type: string
+      bucket:
+        example: aiha-backup
+        type: string
+      endpoint:
+        example: https://storage.example.com:9000
+        type: string
+      prefix:
+        example: systems/web01
+        type: string
+      provider:
+        example: Minio
+        type: string
+      region:
+        example: us-east-1
+        type: string
+      secretKey:
+        example: <secret-key>
+        type: string
+      sessionToken:
+        example: <session-token>
+        type: string
+      type:
+        example: s3
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreClaimReq:
+    properties:
+      claimToken:
+        description: |-
+          ClaimToken is the one-time secret injected through the instance's init
+          script.
+        example: <claim-token>
+        type: string
+      requestKey:
+        description: |-
+          RequestKey identifies this agent's claim. Retries reuse it so that a
+          response lost in transit can be fetched again.
+        example: 3f2a9c1e6b7d4a80
+        type: string
+    required:
+    - claimToken
+    - requestKey
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreClaimResp:
+    properties:
+      plan:
+        description: Plan is passed through as registered; its schema is RestorePlan.
+        type: object
+      recoveryId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+      reportToken:
+        description: |-
+          ReportToken authenticates this agent's progress and result reports for
+          the restore. A new one is issued on every claim response, redeliveries
+          included, and only the latest is accepted. It is a secret.
+        example: <report-token>
+        type: string
+      repository:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryAccess'
+      restoreId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreProgressReq:
+    properties:
+      item:
+        description: Item is the backup file being restored, while extracting.
+        example: web01-nvme0n1p1-1a2b3c4d5e6f7081.aha
+        type: string
+      phase:
+        description: Phase is the step being carried out, e.g. "extracting".
+        example: extracting
+        type: string
+      processedBytes:
+        description: |-
+          ProcessedBytes is how much of the backup files has been read from the
+          repository; TotalBytes is their combined size.
+        example: 1048576
+        minimum: 0
+        type: integer
+      seq:
+        description: Seq orders reports within a restore. An older one is ignored.
+        example: 3
+        minimum: 1
+        type: integer
+      step:
+        description: Step and TotalSteps place Phase in the sequence, e.g. 4 of 6.
+        example: 4
+        minimum: 0
+        type: integer
+      totalBytes:
+        example: 4294967296
+        minimum: 0
+        type: integer
+      totalSteps:
+        example: 6
+        minimum: 0
+        type: integer
+    required:
+    - phase
+    - seq
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreResultReq:
+    properties:
+      message:
+        example: Restored 3 partition(s) (412.5s)
+        type: string
+      outcome:
+        description: Outcome is succeeded or failed.
+        enum:
+        - succeeded
+        - failed
+        example: succeeded
+        type: string
+      phase:
+        description: Phase is the step the restore ended in.
+        example: bootloader
+        type: string
+    required:
+    - outcome
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg:
+    properties:
+      message:
+        example: Service ready
+        type: string
+    type: object
+info:
+  contact: {}
+  description: REST API of the AI-HA framework, which backs up and restores workloads
+    across clouds.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: AI-HA REST API
+  version: 0.1.0
+paths:
+  /agent/inventory:
+    post:
+      consumes:
+      - application/json
+      description: 'Report the partitions that make up the calling agent''s system,
+        so that a backup can be asked for without naming them by hand. The report
+        replaces any earlier one: a system keeps one inventory, and its layout history
+        lives in the backup manifests. An agent that could not account for every filesystem
+        the system needs says so, and backup targets are then not chosen automatically.
+        The system is taken from the agent''s token, never from the body.'
+      operationId: PostAgentInventory
+      parameters:
+      - description: Inventory report
+        in: body
+        name: agentInventoryReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInventoryReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Report what this system is made of
+      tags:
+      - '[Agent] Inventory'
+  /agent/jobs:
+    get:
+      description: 'Long-poll for work assigned to the calling agent''s system. Returns
+        the job as soon as one is waiting, or 204 when the wait elapses with nothing
+        to do; the 204 is the normal idle path and must not be treated as an error
+        or backed off. Receiving a job grants nothing: the agent must claim it and
+        see the claim succeed before starting. Reaching this endpoint is also what
+        marks the agent as alive.'
+      operationId: GetAgentJobs
+      parameters:
+      - default: 45
+        description: Seconds to wait for work, clamped to 5-45
+        in: query
+        name: wait
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJob'
+        "204":
+          description: No work is waiting
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Wait for work
+      tags:
+      - '[Agent] Jobs'
+  /agent/jobs/{jobId}/claim:
+    post:
+      consumes:
+      - application/json
+      description: 'Take a job handed out by the long poll. Work must not start until
+        this succeeds: two agents can be handed the same job and only the claim decides
+        between them. Retrying with the same request key before any progress is reported
+        returns the same attempt with a new lease token, since the first response
+        was evidently lost. The response carries the repository the job writes to,
+        credentials included, decrypted for this response; if it cannot be opened
+        the claim is not recorded and may be retried.'
+      operationId: PostAgentJobClaim
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Claim request
+        in: body
+        name: agentJobClaimReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobClaimReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobClaimResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Claim a job
+      tags:
+      - '[Agent] Jobs'
+  /agent/jobs/{jobId}/progress:
+    post:
+      consumes:
+      - application/json
+      description: 'Report on a running attempt and renew its lease. Send this periodically
+        whether or not the work advanced: it is what keeps the lease alive. A cancel
+        request travels back on the response, as there is no other path to an agent.'
+      operationId: PostAgentJobProgress
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Progress report
+        in: body
+        name: agentJobProgressReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobProgressReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobProgressResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Report progress on a job
+      tags:
+      - '[Agent] Jobs'
+  /agent/jobs/{jobId}/result:
+    post:
+      consumes:
+      - application/json
+      description: Finish an attempt. Repeating the same result is accepted, since
+        the agent cannot know whether its first report arrived; a different result
+        for an attempt already finished is refused.
+      operationId: PostAgentJobResult
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      - description: Result
+        in: body
+        name: agentJobResultReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentJobResultReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Result recorded
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Report how a job ended
+      tags:
+      - '[Agent] Jobs'
+  /agent/register:
+    post:
+      consumes:
+      - application/json
+      description: Spend a registration token to receive an agent identity and its
+        long-lived token. The token is returned only here. Retrying with the same
+        request key reports that the enrolment already completed.
+      operationId: PostAgentRegister
+      parameters:
+      - description: Registration request
+        in: body
+        name: agentRegisterReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentRegisterReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentRegisterResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      summary: Enrol an agent
+      tags:
+      - '[Agent] Enrolment'
+  /agent/restore/{recoveryId}/claim:
+    post:
+      consumes:
+      - application/json
+      description: Called by the agent of an instance booted into rescue mode for
+        a restore. Presenting the job's claim token returns the restore plan and repository
+        access. Retrying with the same request key returns the same response until
+        the redelivery window closes.
+      operationId: PostRestoreClaim
+      parameters:
+      - description: Recovery ID injected into the rescue instance
+        in: path
+        name: recoveryId
+        required: true
+        type: string
+      - description: Claim token and request key
+        in: body
+        name: restoreClaimReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreClaimReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreClaimResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "410":
+          description: Gone
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      summary: Claim a restore job
+      tags:
+      - '[Agent] Restore'
+  /agent/restore/{recoveryId}/progress:
+    post:
+      consumes:
+      - application/json
+      description: Called by the rescue agent while it restores. The first report
+        moves a claimed job to restoring. Reports carry an increasing sequence number;
+        one older than the last recorded is accepted and ignored.
+      operationId: PostRestoreProgress
+      parameters:
+      - description: Recovery ID injected into the rescue instance
+        in: path
+        name: recoveryId
+        required: true
+        type: string
+      - description: Progress report
+        in: body
+        name: restoreProgressReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreProgressReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Progress recorded
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - RestoreReportToken: []
+      summary: Report progress on a restore
+      tags:
+      - '[Agent] Restore'
+  /agent/restore/{recoveryId}/result:
+    post:
+      consumes:
+      - application/json
+      description: Called by the rescue agent when the restore ends. A succeeded restore
+        waits for its boot to be confirmed; a failed one ends the job. Repeating the
+        recorded result is accepted, since the agent cannot know whether its first
+        report arrived; a different result is refused.
+      operationId: PostRestoreResult
+      parameters:
+      - description: Recovery ID injected into the rescue instance
+        in: path
+        name: recoveryId
+        required: true
+        type: string
+      - description: Result
+        in: body
+        name: restoreResultReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreResultReq'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Result recorded
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - RestoreReportToken: []
+      summary: Report how a restore ended
+      tags:
+      - '[Agent] Restore'
+  /readyz:
+    get:
+      description: Report whether the AI-HA framework has completed initialization
+        and can accept requests.
+      operationId: GetReadyz
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      summary: Check whether the framework is ready
+      tags:
+      - '[Admin] System Management'
+  /swagger.json:
+    get:
+      description: Return the generated OpenAPI (Swagger) document describing this
+        API.
+      operationId: GetSwaggerSpec
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Get the OpenAPI specification
+      tags:
+      - '[Admin] System Management'
+swagger: "2.0"
