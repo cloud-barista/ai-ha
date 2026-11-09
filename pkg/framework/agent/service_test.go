@@ -124,7 +124,11 @@ func (f *fakeStore) ListAgents(context.Context) ([]Agent, time.Time, error) {
 func (f *fakeStore) RevokeAgent(_ context.Context, agentID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if a, ok := f.agents[agentID]; ok && a.RevokedAt == nil {
+	a, ok := f.agents[agentID]
+	if !ok {
+		return ErrAgentNotFound
+	}
+	if a.RevokedAt == nil {
 		revoked := f.now
 		a.RevokedAt = &revoked
 	}
@@ -145,12 +149,16 @@ func (f *fakeStore) RevokeRegistrationToken(_ context.Context, tokenID string) e
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for _, t := range f.tokens {
-		if t.TokenID == tokenID && t.RevokedAt == nil {
+		if t.TokenID != tokenID {
+			continue
+		}
+		if t.RevokedAt == nil {
 			revoked := f.now
 			t.RevokedAt = &revoked
 		}
+		return nil
 	}
-	return nil
+	return ErrTokenNotFound
 }
 
 func (f *fakeStore) advance(d time.Duration) {
@@ -451,5 +459,117 @@ func TestIssueRegistrationTokenValidates(t *testing.T) {
 	}
 	if _, err := svc.IssueRegistrationToken(context.Background(), time.Minute, 0, ""); !errors.Is(err, ErrInvalidRequest) {
 		t.Errorf("a zero use count was accepted: %v", err)
+	}
+}
+
+func TestRevokeUnknownIsNotFound(t *testing.T) {
+	store := newFakeStore()
+	svc := NewService(store)
+	ctx := context.Background()
+
+	if err := svc.RevokeAgent(ctx, "no-such-agent"); !errors.Is(err, ErrAgentNotFound) {
+		t.Errorf("revoke agent: err = %v, want ErrAgentNotFound", err)
+	}
+	if err := svc.RevokeRegistrationToken(ctx, "no-such-token"); !errors.Is(err, ErrTokenNotFound) {
+		t.Errorf("revoke token: err = %v, want ErrTokenNotFound", err)
+	}
+}
+
+// statusFor builds an agent for one system, for the grouping tests.
+func statusFor(id, system string, online, revoked bool) AgentStatus {
+	s := AgentStatus{Agent: Agent{AgentID: id, SystemID: system}, Online: online}
+	if revoked {
+		at := time.Now()
+		s.RevokedAt = &at
+	}
+	return s
+}
+
+func TestSystemsGroupAgents(t *testing.T) {
+	tests := []struct {
+		name   string
+		agents []AgentStatus
+		want   map[string]string
+	}{
+		{"one agent each",
+			[]AgentStatus{statusFor("a", "s1", true, false), statusFor("b", "s2", false, false)},
+			map[string]string{"s1": "a", "s2": "b"}},
+		{"the newer of two equals",
+			[]AgentStatus{statusFor("new", "s1", false, false), statusFor("old", "s1", false, false)},
+			map[string]string{"s1": "new"}},
+		// Any live agent can take the system's jobs, so the system is reachable
+		// even when the agent enrolled last has yet to be heard from.
+		{"an online agent over a newer offline one",
+			[]AgentStatus{statusFor("new", "s1", false, false), statusFor("old", "s1", true, false)},
+			map[string]string{"s1": "old"}},
+		{"a live agent over a newer revoked one",
+			[]AgentStatus{statusFor("new", "s1", false, true), statusFor("old", "s1", false, false)},
+			map[string]string{"s1": "old"}},
+		{"all revoked keeps the newest",
+			[]AgentStatus{statusFor("new", "s1", false, true), statusFor("old", "s1", false, true)},
+			map[string]string{"s1": "new"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := systemsOf(tt.agents)
+			if len(got) != len(tt.want) {
+				t.Fatalf("%d systems, want %d", len(got), len(tt.want))
+			}
+			for _, s := range got {
+				if s.Agent.AgentID != tt.want[s.SystemID] {
+					t.Errorf("%s speaks through %s, want %s", s.SystemID, s.Agent.AgentID, tt.want[s.SystemID])
+				}
+			}
+		})
+	}
+}
+
+func TestSystemsKeepNewestFirst(t *testing.T) {
+	got := systemsOf([]AgentStatus{
+		statusFor("a", "newest", false, false),
+		statusFor("b", "older", false, false),
+		statusFor("c", "newest", false, false),
+	})
+	if len(got) != 2 || got[0].SystemID != "newest" || got[1].SystemID != "older" {
+		t.Fatalf("systems = %+v", got)
+	}
+}
+
+func TestGetSystemUnknown(t *testing.T) {
+	svc := NewService(newFakeStore())
+	if _, err := svc.GetSystem(context.Background(), "no-such-system"); !errors.Is(err, ErrSystemNotFound) {
+		t.Fatalf("err = %v, want ErrSystemNotFound", err)
+	}
+}
+
+func TestStatesReadInOrderOfPrecedence(t *testing.T) {
+	now := time.Now()
+	past := now.Add(-time.Hour)
+	future := now.Add(time.Hour)
+
+	tokens := []struct {
+		name  string
+		token RegistrationToken
+		want  string
+	}{
+		{"usable", RegistrationToken{ExpiresAt: future, MaxUses: 1}, TokenStateUsable},
+		{"expired", RegistrationToken{ExpiresAt: past, MaxUses: 1}, TokenStateExpired},
+		{"used up beats expired", RegistrationToken{ExpiresAt: past, MaxUses: 1, Uses: 1}, TokenStateUsedUp},
+		{"revoked beats all", RegistrationToken{ExpiresAt: past, MaxUses: 1, Uses: 1, RevokedAt: &now}, TokenStateRevoked},
+	}
+	for _, tt := range tokens {
+		if got := tt.token.State(now); got != tt.want {
+			t.Errorf("%s: state = %s, want %s", tt.name, got, tt.want)
+		}
+	}
+
+	if got := statusFor("a", "s", true, true).State(); got != StateRevoked {
+		t.Errorf("revoked agent: state = %s", got)
+	}
+	if got := statusFor("a", "s", true, false).State(); got != StateOnline {
+		t.Errorf("online agent: state = %s", got)
+	}
+	if got := statusFor("a", "s", false, false).State(); got != StateOffline {
+		t.Errorf("offline agent: state = %s", got)
 	}
 }

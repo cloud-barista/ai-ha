@@ -146,6 +146,26 @@ type AgentStatus struct {
 	Online bool
 }
 
+// State describes the agent for an operator reading a list.
+func (a AgentStatus) State() string {
+	switch {
+	case a.RevokedAt != nil:
+		return StateRevoked
+	case a.Online:
+		return StateOnline
+	default:
+		return StateOffline
+	}
+}
+
+// System is a protected machine. It exists because an agent enrolled for it;
+// the framework has no other record of one.
+type System struct {
+	SystemID string
+	// Agent is the agent that speaks for the system: see representative.
+	Agent AgentStatus
+}
+
 // ListAgents returns the enrolled agents with their liveness.
 func (s *Service) ListAgents(ctx context.Context) ([]AgentStatus, error) {
 	agents, now, err := s.store.ListAgents(ctx)
@@ -157,6 +177,60 @@ func (s *Service) ListAgents(ctx context.Context) ([]AgentStatus, error) {
 		out = append(out, AgentStatus{Agent: a, Online: isOnline(a, now)})
 	}
 	return out, nil
+}
+
+// ListSystems returns the protected systems, most recently enrolled first.
+func (s *Service) ListSystems(ctx context.Context) ([]System, error) {
+	agents, err := s.ListAgents(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return systemsOf(agents), nil
+}
+
+// GetSystem returns one protected system, or ErrSystemNotFound.
+func (s *Service) GetSystem(ctx context.Context, systemID string) (System, error) {
+	systems, err := s.ListSystems(ctx)
+	if err != nil {
+		return System{}, err
+	}
+	for _, sys := range systems {
+		if sys.SystemID == systemID {
+			return sys, nil
+		}
+	}
+	return System{}, ErrSystemNotFound
+}
+
+// systemsOf groups agents, newest first, into the systems they protect.
+func systemsOf(agents []AgentStatus) []System {
+	index := make(map[string]int, len(agents))
+	var out []System
+	for _, a := range agents {
+		i, seen := index[a.SystemID]
+		if !seen {
+			index[a.SystemID] = len(out)
+			out = append(out, System{SystemID: a.SystemID, Agent: a})
+			continue
+		}
+		if representative(a, out[i].Agent) {
+			out[i].Agent = a
+		}
+	}
+	return out
+}
+
+// representative reports whether a speaks for a system better than current.
+//
+// A system can have several agents, because reinstalling one enrols a new
+// agent for the same system. Jobs go to the system and any of its live agents
+// can take them, so one that is online decides; otherwise one that can still
+// come back does. Ties stay with current, the newer of the two.
+func representative(a, current AgentStatus) bool {
+	if a.Online != current.Online {
+		return a.Online
+	}
+	return a.RevokedAt == nil && current.RevokedAt != nil
 }
 
 // isOnline reports whether an agent has been heard from recently enough. A

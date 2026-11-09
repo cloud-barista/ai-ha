@@ -32,6 +32,69 @@ type AgentRegisterResp struct {
 	AgentToken string `json:"agentToken" example:"<agent-token>"`
 }
 
+// AgentInfo is an enrolled agent as an operator sees it.
+type AgentInfo struct {
+	AgentID      string `json:"agentId"                example:"9b1c2d3e4f5a6b7c"`
+	SystemID     string `json:"systemId"               example:"1a2b3c4d5e6f7081"`
+	Hostname     string `json:"hostname,omitempty"     example:"web01"`
+	AgentVersion string `json:"agentVersion,omitempty" example:"aiha-agent 0.1.0"`
+	Mode         string `json:"mode"                   example:"normal"`
+	// Status is online, offline or revoked.
+	Status string `json:"status" example:"online"`
+	// RegistrationTokenID is the token that enrolled the agent, which finds an
+	// agent that never received its enrolment response.
+	RegistrationTokenID string     `json:"registrationTokenId,omitempty" example:"4b5c6d7e8f9a0b1c"`
+	RegisteredAt        time.Time  `json:"registeredAt"`
+	LastSeenAt          *time.Time `json:"lastSeenAt,omitempty"`
+	RevokedAt           *time.Time `json:"revokedAt,omitempty"`
+}
+
+// AgentListResp lists enrolled agents.
+type AgentListResp struct {
+	Items []AgentInfo `json:"items"`
+}
+
+// RegistrationTokenReq issues a registration token. An empty request issues
+// one good for a single enrolment within 30 minutes.
+type RegistrationTokenReq struct {
+	// TTLSeconds is how long the token may be used to enrol, at most a week.
+	TTLSeconds int `json:"ttlSeconds,omitempty" validate:"min=0,max=604800" example:"1800"`
+	// MaxUses is how many agents the token may enrol.
+	MaxUses int `json:"maxUses,omitempty" validate:"min=0,max=10000" example:"1"`
+	// Note records what the token was issued for.
+	Note string `json:"note,omitempty" validate:"max=512" example:"web01 rollout"`
+}
+
+// RegistrationTokenIssuedResp carries a new registration token and the settings
+// an agent needs to use it. The token is returned only here: the framework
+// keeps just its hash.
+type RegistrationTokenIssuedResp struct {
+	TokenID   string          `json:"tokenId"   example:"4b5c6d7e8f9a0b1c"`
+	Token     string          `json:"token"     example:"<registration-token>"`
+	ExpiresAt time.Time       `json:"expiresAt"`
+	MaxUses   int             `json:"maxUses"   example:"1"`
+	Framework FrameworkAccess `json:"framework"`
+}
+
+// RegistrationTokenInfo is an issued registration token. The token itself is
+// not stored and cannot be listed.
+type RegistrationTokenInfo struct {
+	TokenID string `json:"tokenId" example:"4b5c6d7e8f9a0b1c"`
+	// Status is usable, used_up, expired or revoked.
+	Status    string     `json:"status"  example:"usable"`
+	Uses      int        `json:"uses"    example:"0"`
+	MaxUses   int        `json:"maxUses" example:"1"`
+	ExpiresAt time.Time  `json:"expiresAt"`
+	Note      string     `json:"note,omitempty" example:"web01 rollout"`
+	CreatedAt time.Time  `json:"createdAt"`
+	RevokedAt *time.Time `json:"revokedAt,omitempty"`
+}
+
+// RegistrationTokenListResp lists issued registration tokens.
+type RegistrationTokenListResp struct {
+	Items []RegistrationTokenInfo `json:"items"`
+}
+
 // AgentJob is work handed to an agent by the long poll.
 //
 // Receiving it grants nothing. Two agents can be handed the same job; the
@@ -129,6 +192,19 @@ type BackupJobSpec struct {
 	// the ID is kept with the job; the agent receives the repository's access,
 	// credentials included, in the claim response.
 	RepositoryID string `json:"repositoryId" example:"3f2a9c1e6b7d4a80"`
+}
+
+// BackupJobResult is what a finished backup job reports. It is recorded as the
+// attempt's result, which is how the framework finds a set by its ID later.
+type BackupJobResult struct {
+	BackupSetID string `json:"backupSetId" example:"9c0d1e2f3a4b5c6d"`
+	// Manifest is the set's manifest file in the repository.
+	Manifest string `json:"manifest" example:"9c0d1e2f3a4b5c6d-manifest.json"`
+	// Status is the set's own status, which can be partial when some of its
+	// items failed.
+	Status string `json:"status" example:"completed"`
+	// Items is how many backup files the set holds.
+	Items int `json:"items" example:"3"`
 }
 
 // AgentInventoryReq is a system's current configuration, as its agent sees it.

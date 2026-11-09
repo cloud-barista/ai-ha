@@ -61,7 +61,7 @@ func (r backupRunner) Run(ctx context.Context, jobID string, raw json.RawMessage
 	outcome := worker.Outcome{}
 	if set.ID != "" {
 		outcome.Message = fmt.Sprintf("Backup set %s (%s, %d item(s))", set.ID, set.Status, len(set.Items))
-		outcome.Detail = backupResult{
+		outcome.Detail = apimodel.BackupJobResult{
 			BackupSetID: set.ID,
 			Manifest:    model.ManifestName(set.ID),
 			Status:      string(set.Status),
@@ -69,14 +69,6 @@ func (r backupRunner) Run(ctx context.Context, jobID string, raw json.RawMessage
 		}
 	}
 	return outcome, err
-}
-
-// backupResult is what a finished backup job reports to the framework.
-type backupResult struct {
-	BackupSetID string `json:"backupSetId"`
-	Manifest    string `json:"manifest"`
-	Status      string `json:"status"`
-	Items       int    `json:"items"`
 }
 
 // s3Target turns the repository a job was handed into what the S3 backend

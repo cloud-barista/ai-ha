@@ -119,6 +119,8 @@ func (f *fakeStore) Reopen(_ context.Context, recoveryID string, r Result) (bool
 	return true, nil
 }
 
+func (f *fakeStore) List(context.Context, ListFilter) ([]Job, error) { return nil, nil }
+
 func (f *fakeStore) Lookup(_ context.Context, id string) (Job, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

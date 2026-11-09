@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -44,6 +45,14 @@ func NewPGStore(pool *pgxpool.Pool) *PGStore { return &PGStore{pool: pool} }
 const jobColumns = `job_id, system_id, kind, status, spec, current_attempt_id,
                     cancel_requested, message, requested_by, created_at,
                     expires_at, started_at, finished_at`
+
+// attemptColumns is the column list every attempt read shares.
+const attemptColumns = `attempt_id, job_id, agent_id, claim_request_key, lease_expires_at,
+                        last_seen_at, last_progress_at, last_seq, phase, processed_bytes,
+                        outcome, message, result, superseded, created_at, finished_at`
+
+// defaultListLimit is how many jobs a list returns unless told otherwise.
+const defaultListLimit = 50
 
 const insertSQL = `
 INSERT INTO jobs (job_id, system_id, kind, status, spec, requested_by, expires_at)
@@ -356,11 +365,7 @@ func (s *PGStore) Get(ctx context.Context, jobID string) (Job, *Attempt, error) 
 		return job, nil, nil
 	}
 
-	const aq = `
-SELECT attempt_id, job_id, agent_id, claim_request_key, lease_expires_at,
-       last_seen_at, last_progress_at, last_seq, phase, processed_bytes,
-       outcome, message, result, superseded, created_at, finished_at
-  FROM attempts WHERE attempt_id = $1`
+	const aq = `SELECT ` + attemptColumns + ` FROM attempts WHERE attempt_id = $1`
 	attempt, err := scanAttempt(s.pool.QueryRow(ctx, aq, job.CurrentAttemptID))
 	if err != nil {
 		return job, nil, fmt.Errorf("read the current attempt: %w", err)
@@ -368,19 +373,47 @@ SELECT attempt_id, job_id, agent_id, claim_request_key, lease_expires_at,
 	return job, &attempt, nil
 }
 
-// List implements Store.
-func (s *PGStore) List(ctx context.Context, systemID string, limit int) ([]Job, error) {
+// listSQL builds the query for f. The conditions are fixed strings and every
+// value travels as a parameter.
+func listSQL(f ListFilter) (string, []any) {
+	limit := f.Limit
 	if limit <= 0 {
-		limit = 50
+		limit = defaultListLimit
 	}
-	q := `SELECT ` + jobColumns + ` FROM jobs`
-	args := []any{limit}
-	if systemID != "" {
-		q += ` WHERE system_id = $2`
-		args = append(args, systemID)
+	args := []any{limit, f.Offset}
+	var where []string
+	add := func(condition string, value any) {
+		args = append(args, value)
+		where = append(where, fmt.Sprintf(condition, len(args)))
 	}
-	q += ` ORDER BY created_at DESC LIMIT $1`
+	if f.SystemID != "" {
+		add("system_id = $%d", f.SystemID)
+	}
+	if f.Kind != "" {
+		add("kind = $%d", string(f.Kind))
+	}
+	if f.Status != "" {
+		add("status = $%d", string(f.Status))
+	}
+	if !f.From.IsZero() {
+		add("created_at >= $%d", f.From)
+	}
+	if !f.To.IsZero() {
+		add("created_at < $%d", f.To)
+	}
 
+	q := `SELECT ` + jobColumns + ` FROM jobs`
+	if len(where) > 0 {
+		q += ` WHERE ` + strings.Join(where, " AND ")
+	}
+	// job_id breaks ties, so that paging neither repeats nor skips a job
+	// created in the same instant as another.
+	return q + ` ORDER BY created_at DESC, job_id LIMIT $1 OFFSET $2`, args
+}
+
+// List implements Store.
+func (s *PGStore) List(ctx context.Context, f ListFilter) ([]Job, error) {
+	q, args := listSQL(f)
 	rows, err := s.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list jobs: %w", err)
@@ -398,14 +431,87 @@ func (s *PGStore) List(ctx context.Context, systemID string, limit int) ([]Job, 
 	return out, rows.Err()
 }
 
+// ListBackups implements Store. The attempts are read in a second query rather
+// than joined, because a job with no attempt yet would come back as a row of
+// NULLs that an attempt's columns cannot scan into.
+func (s *PGStore) ListBackups(ctx context.Context, f ListFilter) ([]BackupRecord, error) {
+	f.Kind = KindBackup
+	jobs, err := s.List(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	for _, j := range jobs {
+		if j.CurrentAttemptID != "" {
+			ids = append(ids, j.CurrentAttemptID)
+		}
+	}
+	attempts, err := s.attempts(ctx, `attempt_id = ANY($1)`, ids)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]*Attempt, len(attempts))
+	for i := range attempts {
+		byID[attempts[i].AttemptID] = &attempts[i]
+	}
+
+	out := make([]BackupRecord, 0, len(jobs))
+	for _, j := range jobs {
+		out = append(out, BackupRecord{Job: j, Attempt: byID[j.CurrentAttemptID]})
+	}
+	return out, nil
+}
+
+// FindBackups implements Store.
+func (s *PGStore) FindBackups(ctx context.Context, setID string) ([]BackupRecord, error) {
+	attempts, err := s.attempts(ctx, `result->>'backupSetId' = $1`, setID)
+	if err != nil {
+		return nil, err
+	}
+	var out []BackupRecord
+	for i := range attempts {
+		job, _, err := s.Get(ctx, attempts[i].JobID)
+		if err != nil {
+			return nil, err
+		}
+		if job.Kind == KindBackup {
+			out = append(out, BackupRecord{Job: job, Attempt: &attempts[i]})
+		}
+	}
+	return out, nil
+}
+
+// attempts reads the attempts matching a fixed condition with one parameter.
+func (s *PGStore) attempts(ctx context.Context, condition string, arg any) ([]Attempt, error) {
+	q := `SELECT ` + attemptColumns + ` FROM attempts WHERE ` + condition + ` ORDER BY created_at`
+	rows, err := s.pool.Query(ctx, q, arg)
+	if err != nil {
+		return nil, fmt.Errorf("read attempts: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Attempt
+	for rows.Next() {
+		a, err := scanAttempt(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan attempt: %w", err)
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
 // RequestCancel implements Store.
 func (s *PGStore) RequestCancel(ctx context.Context, jobID string) (Job, error) {
 	// A queued job has no agent to stop, so it ends here. A job in flight is
 	// only marked: the agent has to confirm it stopped, and a cancel request
-	// is not a confirmation.
+	// is not a confirmation. A job that already ended is left as it was: the
+	// row still comes back, so that the caller can tell it from a missing one,
+	// but it must not read as a job somebody cancelled.
 	const q = `
 UPDATE jobs
-   SET cancel_requested = true,
+   SET cancel_requested = status IN ('queued', 'claimed', 'running', 'cancelling'),
        status = CASE WHEN status = 'queued' THEN 'cancelled'
                      WHEN status IN ('claimed', 'running') THEN 'cancelling'
                      ELSE status END,

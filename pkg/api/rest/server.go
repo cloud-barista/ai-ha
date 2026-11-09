@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cloud-barista/ai-ha/pkg/api/rest/model"
 	"github.com/cloud-barista/ai-ha/pkg/framework/agent"
 	"github.com/cloud-barista/ai-ha/pkg/framework/inventory"
 	"github.com/cloud-barista/ai-ha/pkg/framework/job"
+	"github.com/cloud-barista/ai-ha/pkg/framework/repository"
 	"github.com/cloud-barista/ai-ha/pkg/framework/restore"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -76,6 +78,15 @@ type Config struct {
 	// their systems are made of. Without it backup targets have to be named by
 	// hand.
 	Inventory *inventory.Service
+	// Repositories, when set, serves the management of backup repositories.
+	Repositories *repository.Service
+	// AdminAuth, when set, opens the management API. Left nil, that API is not
+	// served at all: there is no unauthenticated mode, and agents are served
+	// either way.
+	AdminAuth AdminAuthenticator
+	// FrameworkAccess is how agents reach this framework. The management API
+	// returns it to whoever has to configure one.
+	FrameworkAccess model.FrameworkAccess
 	// CORSOrigins are the browser origins allowed to call the API. Empty
 	// leaves CORS off: agents are not browsers and never need it.
 	CORSOrigins []string
@@ -93,6 +104,18 @@ type Config struct {
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 // @BasePath /aiha
+// @securityDefinitions.apikey AdminToken
+// @in header
+// @name Authorization
+// @description Management API token, as "Bearer <token>". It is the file named by AIHA_FRAMEWORK_ADMIN_TOKEN_FILE.
+// @securityDefinitions.apikey AgentToken
+// @in header
+// @name Authorization
+// @description The agent's own token, as "Bearer <token>", issued at enrolment.
+// @securityDefinitions.apikey RestoreReportToken
+// @in header
+// @name Authorization
+// @description The rescue agent's report token, as "Bearer <token>", issued in the claim response.
 func Run(ctx context.Context, cfg Config) error {
 	if cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" {
 		return errors.New("a TLS certificate and key are required to serve the API")
@@ -169,7 +192,7 @@ func newEcho(cfg Config) *echo.Echo {
 	if len(cfg.CORSOrigins) > 0 {
 		e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 			AllowOrigins: cfg.CORSOrigins,
-			AllowMethods: []string{http.MethodGet, http.MethodPost},
+			AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 		}))
 	}
 	e.Use(middleware.BodyLimit(bodyLimit))
@@ -184,6 +207,7 @@ func newEcho(cfg Config) *echo.Echo {
 		g.POST("/agent/restore/:recoveryId/claim", h.RestPostRestoreClaim)
 		g.POST("/agent/restore/:recoveryId/progress", h.RestPostRestoreProgress)
 		g.POST("/agent/restore/:recoveryId/result", h.RestPostRestoreResult)
+		g.POST("/agent/restore/:recoveryId/boot-verify", RestPostRestoreBootVerify)
 	}
 	if cfg.Agent != nil {
 		h := &agentHandler{svc: cfg.Agent, jobs: cfg.Jobs, inventory: cfg.Inventory}
@@ -200,7 +224,9 @@ func newEcho(cfg Config) *echo.Echo {
 		if cfg.Inventory != nil {
 			g.POST("/agent/inventory", h.RestPostAgentInventory, auth)
 		}
+		g.POST("/agent/health", RestPostAgentHealth, auth)
 	}
+	registerManagementRoutes(g, cfg)
 	return e
 }
 

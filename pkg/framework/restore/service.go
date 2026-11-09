@@ -316,6 +316,11 @@ func (s *Service) Get(ctx context.Context, id string) (Job, error) {
 	return job, err
 }
 
+// List returns the restore jobs f selects, newest first.
+func (s *Service) List(ctx context.Context, f ListFilter) ([]Job, error) {
+	return s.store.List(ctx, f)
+}
+
 func response(job Job, access model.RepositoryAccess) model.RestoreClaimResp {
 	return model.RestoreClaimResp{
 		RestoreID:  job.RestoreID,

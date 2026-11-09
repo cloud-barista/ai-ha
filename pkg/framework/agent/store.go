@@ -40,8 +40,27 @@ var (
 	ErrAgentNotFound = errors.New("agent not found")
 	// ErrAgentRevoked reports an agent whose token has been revoked.
 	ErrAgentRevoked = errors.New("agent token revoked")
+	// ErrTokenNotFound reports that no registration token has the given id.
+	ErrTokenNotFound = errors.New("registration token not found")
+	// ErrSystemNotFound reports that no agent ever enrolled for the system.
+	ErrSystemNotFound = errors.New("system not found")
 	// ErrInvalidRequest reports an enrolment request that cannot be accepted.
 	ErrInvalidRequest = errors.New("invalid registration request")
+)
+
+// States an agent can be in, as shown to an operator.
+const (
+	StateRevoked = "revoked"
+	StateOnline  = "online"
+	StateOffline = "offline"
+)
+
+// States a registration token can be in, as shown to an operator.
+const (
+	TokenStateRevoked = "revoked"
+	TokenStateUsedUp  = "used_up"
+	TokenStateExpired = "expired"
+	TokenStateUsable  = "usable"
 )
 
 // RegistrationToken is a token an operator issued for enrolment.
@@ -53,6 +72,20 @@ type RegistrationToken struct {
 	Note      string
 	CreatedAt time.Time
 	RevokedAt *time.Time
+}
+
+// State describes what is left of the token at the store's time now.
+func (t RegistrationToken) State(now time.Time) string {
+	switch {
+	case t.RevokedAt != nil:
+		return TokenStateRevoked
+	case t.Uses >= t.MaxUses:
+		return TokenStateUsedUp
+	case !now.Before(t.ExpiresAt):
+		return TokenStateExpired
+	default:
+		return TokenStateUsable
+	}
 }
 
 // Agent is an enrolled agent as stored by the framework.
@@ -112,13 +145,15 @@ type Store interface {
 	// time, so that "online" is derived from one clock.
 	ListAgents(ctx context.Context) ([]Agent, time.Time, error)
 
-	// RevokeAgent revokes an agent's token. It is idempotent.
+	// RevokeAgent revokes an agent's token. It is idempotent, and returns
+	// ErrAgentNotFound when no agent has the id.
 	RevokeAgent(ctx context.Context, agentID string) error
 
 	// ListRegistrationTokens returns issued tokens with the store's current
 	// time. The tokens themselves are not stored and cannot be listed.
 	ListRegistrationTokens(ctx context.Context) ([]RegistrationToken, time.Time, error)
 
-	// RevokeRegistrationToken revokes an unspent token. It is idempotent.
+	// RevokeRegistrationToken revokes a token. It is idempotent, and returns
+	// ErrTokenNotFound when no token has the id.
 	RevokeRegistrationToken(ctx context.Context, tokenID string) error
 }

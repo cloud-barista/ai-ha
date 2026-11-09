@@ -118,7 +118,7 @@ not know its own ID.`,
 		fmt.Fprintln(w, "AGENT\tSYSTEM\tHOST\tSTATE\tLAST SEEN\tTOKEN\tKEY")
 		for _, a := range agents {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-				a.AgentID, a.SystemID, orDash(a.Hostname), agentState(a),
+				a.AgentID, a.SystemID, orDash(a.Hostname), a.State(),
 				lastSeen(a), orDash(a.RegistrationTokenID), orDash(a.RegistrationKey))
 		}
 		return w.Flush()
@@ -179,7 +179,7 @@ themselves are not stored and cannot be listed.`,
 		fmt.Fprintln(w, "TOKEN\tSTATE\tUSES\tEXPIRES\tNOTE")
 		for _, t := range tokens {
 			fmt.Fprintf(w, "%s\t%s\t%d/%d\t%s\t%s\n",
-				t.TokenID, tokenState(t, now), t.Uses, t.MaxUses,
+				t.TokenID, t.State(now), t.Uses, t.MaxUses,
 				t.ExpiresAt.Format("2006-01-02 15:04:05"), orDash(t.Note))
 		}
 		return w.Flush()
@@ -206,32 +206,6 @@ var agentTokenRevokeCmd = &cobra.Command{
 		fmt.Fprintf(cmd.OutOrStdout(), "Registration token %s revoked\n", args[0])
 		return nil
 	},
-}
-
-// agentState describes an agent for an operator reading a list.
-func agentState(a agent.AgentStatus) string {
-	switch {
-	case a.RevokedAt != nil:
-		return "revoked"
-	case a.Online:
-		return "online"
-	default:
-		return "offline"
-	}
-}
-
-// tokenState describes what is left of a registration token.
-func tokenState(t agent.RegistrationToken, now time.Time) string {
-	switch {
-	case t.RevokedAt != nil:
-		return "revoked"
-	case t.Uses >= t.MaxUses:
-		return "used up"
-	case !now.Before(t.ExpiresAt):
-		return "expired"
-	default:
-		return "usable"
-	}
 }
 
 func lastSeen(a agent.AgentStatus) string {

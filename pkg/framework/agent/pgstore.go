@@ -241,11 +241,18 @@ func (s *PGStore) ListAgents(ctx context.Context) ([]Agent, time.Time, error) {
 }
 
 // RevokeAgent implements Store.
+//
+// COALESCE keeps the first revocation time on a repeat, and matching the row
+// regardless lets zero rows mean only that the agent does not exist.
 func (s *PGStore) RevokeAgent(ctx context.Context, agentID string) error {
-	const q = `UPDATE agents SET revoked_at = now()
-	            WHERE agent_id = $1 AND revoked_at IS NULL`
-	if _, err := s.pool.Exec(ctx, q, agentID); err != nil {
+	const q = `UPDATE agents SET revoked_at = COALESCE(revoked_at, now())
+	            WHERE agent_id = $1`
+	tag, err := s.pool.Exec(ctx, q, agentID)
+	if err != nil {
 		return fmt.Errorf("revoke agent: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrAgentNotFound
 	}
 	return nil
 }
@@ -291,10 +298,14 @@ func (s *PGStore) ListRegistrationTokens(ctx context.Context) ([]RegistrationTok
 
 // RevokeRegistrationToken implements Store.
 func (s *PGStore) RevokeRegistrationToken(ctx context.Context, tokenID string) error {
-	const q = `UPDATE registration_tokens SET revoked_at = now()
-	            WHERE token_id = $1 AND revoked_at IS NULL`
-	if _, err := s.pool.Exec(ctx, q, tokenID); err != nil {
+	const q = `UPDATE registration_tokens SET revoked_at = COALESCE(revoked_at, now())
+	            WHERE token_id = $1`
+	tag, err := s.pool.Exec(ctx, q, tokenID)
+	if err != nil {
 		return fmt.Errorf("revoke registration token: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrTokenNotFound
 	}
 	return nil
 }

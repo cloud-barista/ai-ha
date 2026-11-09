@@ -50,6 +50,16 @@ func (s Status) Terminal() bool {
 	return s == StatusCompleted || s == StatusFailed || s == StatusCancelled
 }
 
+// Known reports whether s is a status a job can have.
+func (s Status) Known() bool {
+	switch s {
+	case StatusQueued, StatusClaimed, StatusRunning, StatusCancelling,
+		StatusCompleted, StatusFailed, StatusCancelled:
+		return true
+	}
+	return false
+}
+
 // Outcome is how one attempt ended.
 type Outcome string
 
@@ -164,6 +174,26 @@ type BackupSetOrigin struct {
 	RepositoryID string
 }
 
+// ListFilter narrows a list of jobs. A zero field does not filter.
+type ListFilter struct {
+	SystemID string
+	Kind     Kind
+	Status   Status
+	// From and To bound the creation time, From inclusive and To exclusive.
+	From time.Time
+	To   time.Time
+	// Limit defaults to defaultListLimit. Offset skips that many jobs.
+	Limit  int
+	Offset int
+}
+
+// BackupRecord is a backup job with the attempt that carried it out. Attempt
+// is nil until an agent claims the job.
+type BackupRecord struct {
+	Job     Job
+	Attempt *Attempt
+}
+
 // SweepCounts reports what one sweep changed.
 type SweepCounts struct {
 	// QueuedExpired are jobs no agent ever came for.
@@ -223,8 +253,18 @@ type Store interface {
 	// decides what more or none means.
 	FindCompletedBackupSet(ctx context.Context, setID string) ([]BackupSetOrigin, error)
 
-	// List returns jobs, newest first, optionally limited to one system.
-	List(ctx context.Context, systemID string, limit int) ([]Job, error)
+	// List returns the jobs f selects, newest first.
+	List(ctx context.Context, f ListFilter) ([]Job, error)
+
+	// ListBackups returns the backup jobs f selects, newest first, each with
+	// its current attempt. f.Kind is ignored.
+	ListBackups(ctx context.Context, f ListFilter) ([]BackupRecord, error)
+
+	// FindBackups returns every backup job with an attempt that reported setID,
+	// whatever its outcome: a set that failed partway is still reported. An
+	// attempt's result is what holds a set ID, so each record carries that
+	// attempt. Normally there is one; the caller decides what more or none means.
+	FindBackups(ctx context.Context, setID string) ([]BackupRecord, error)
 
 	// RequestCancel marks a job for cancellation. A queued job is cancelled
 	// outright; a running one is only marked, because stopping it requires the

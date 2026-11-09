@@ -255,3 +255,48 @@ func TestPGPreparingFailureReopens(t *testing.T) {
 		t.Fatalf("job = %+v, %v", job, err)
 	}
 }
+
+func TestPGListFilters(t *testing.T) {
+	svc, pool := testPGService(t, time.Hour, time.Hour)
+	ctx := context.Background()
+	created := createPGJob(t, svc, pool)
+
+	find := func(f ListFilter) bool {
+		t.Helper()
+		f.Limit = 200
+		list, err := svc.List(ctx, f)
+		if err != nil {
+			t.Fatalf("list: %v", err)
+		}
+		for _, j := range list {
+			if j.RestoreID == created.RestoreID {
+				return true
+			}
+		}
+		return false
+	}
+
+	future := time.Now().Add(time.Hour)
+	tests := []struct {
+		name   string
+		filter ListFilter
+		want   bool
+	}{
+		{"no filter", ListFilter{}, true},
+		{"status", ListFilter{Status: StatusAwaitingAgent}, true},
+		{"another status", ListFilter{Status: StatusFailed}, false},
+		{"system", ListFilter{SystemID: testSystemID}, true},
+		{"another system", ListFilter{SystemID: "no-such-system"}, false},
+		{"set", ListFilter{BackupSetID: testSetID}, true},
+		{"another set", ListFilter{BackupSetID: "no-such-set"}, false},
+		{"up to the future", ListFilter{To: future}, true},
+		{"from the future", ListFilter{From: future}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := find(tt.filter); got != tt.want {
+				t.Fatalf("found = %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
