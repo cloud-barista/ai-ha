@@ -287,3 +287,54 @@ func TestPGAuthenticateUnknownToken(t *testing.T) {
 		t.Fatalf("err = %v, want ErrAgentNotFound", err)
 	}
 }
+
+func TestPGRevokeUnknownIsNotFound(t *testing.T) {
+	svc, _, _ := testPGService(t)
+	ctx := context.Background()
+
+	if err := svc.RevokeAgent(ctx, "no-such-agent"); !errors.Is(err, ErrAgentNotFound) {
+		t.Errorf("revoke agent: err = %v, want ErrAgentNotFound", err)
+	}
+	if err := svc.RevokeRegistrationToken(ctx, "no-such-token"); !errors.Is(err, ErrTokenNotFound) {
+		t.Errorf("revoke token: err = %v, want ErrTokenNotFound", err)
+	}
+}
+
+// Repeating a revocation must succeed, and must not move the time of the first:
+// that time is when the credential actually stopped being trusted.
+func TestPGRevokeIsIdempotent(t *testing.T) {
+	svc, _, pool := testPGService(t)
+	ctx := context.Background()
+	issued := issuePG(t, svc, pool, time.Minute, 1)
+	got, err := svc.Register(ctx, issued.Token, registration(testKey))
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	revokedAt := func() time.Time {
+		t.Helper()
+		var at time.Time
+		if err := pool.QueryRow(ctx, `SELECT revoked_at FROM agents WHERE agent_id = $1`, got.AgentID).Scan(&at); err != nil {
+			t.Fatalf("read revoked_at: %v", err)
+		}
+		return at
+	}
+
+	if err := svc.RevokeAgent(ctx, got.AgentID); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+	first := revokedAt()
+	if err := svc.RevokeAgent(ctx, got.AgentID); err != nil {
+		t.Fatalf("revoke again: %v", err)
+	}
+	if again := revokedAt(); !again.Equal(first) {
+		t.Fatalf("revoked_at moved from %s to %s", first, again)
+	}
+
+	if err := svc.RevokeRegistrationToken(ctx, issued.TokenID); err != nil {
+		t.Fatalf("revoke token: %v", err)
+	}
+	if err := svc.RevokeRegistrationToken(ctx, issued.TokenID); err != nil {
+		t.Fatalf("revoke token again: %v", err)
+	}
+}

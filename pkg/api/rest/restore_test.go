@@ -95,6 +95,10 @@ func (s *stubStore) Reopen(_ context.Context, _ string, r restore.Result) (bool,
 	return true, nil
 }
 
+func (s *stubStore) List(context.Context, restore.ListFilter) ([]restore.Job, error) {
+	return nil, nil
+}
+
 func (s *stubStore) Lookup(_ context.Context, id string) (restore.Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

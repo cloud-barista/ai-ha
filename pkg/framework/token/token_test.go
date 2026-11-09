@@ -2,6 +2,8 @@ package token
 
 import (
 	"encoding/base64"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -80,5 +82,47 @@ func TestHashDoesNotRevealTheToken(t *testing.T) {
 	// Deterministic: the same token must find the same row on every lookup.
 	if string(Hash(tok)) != string(hash) {
 		t.Fatal("Hash is not deterministic")
+	}
+}
+
+func writeTokenFile(t *testing.T, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "admin.token")
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	return path
+}
+
+// The trailing newline "openssl rand" leaves must not become part of the token,
+// or the token an operator copies from the file would never match.
+func TestLoadFileIgnoresSurroundingWhitespace(t *testing.T) {
+	const plain = "0123456789abcdef0123456789abcdef"
+
+	hash, err := LoadFile(writeTokenFile(t, plain+"\n"))
+	if err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	if !Matches(hash, plain) {
+		t.Fatal("the token in the file does not match its digest")
+	}
+}
+
+func TestLoadFileRefusesWhatCannotBeATrustedToken(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{"not configured", ""},
+		{"missing", filepath.Join(t.TempDir(), "absent")},
+		{"empty", writeTokenFile(t, "\n")},
+		{"typed by hand", writeTokenFile(t, "changeme\n")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := LoadFile(tt.path); err == nil {
+				t.Fatal("LoadFile accepted it")
+			}
+		})
 	}
 }

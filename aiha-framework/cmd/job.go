@@ -94,7 +94,7 @@ var jobListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		list, err := jobs.List(ctx, jobListSystem, jobListLimit)
+		list, err := jobs.List(ctx, job.ListFilter{SystemID: jobListSystem, Limit: jobListLimit})
 		if err != nil {
 			return err
 		}

@@ -29,6 +29,7 @@ type agentStore struct {
 	tokenUsed   bool
 	agents      map[string]*agent.Agent
 	agentTokens map[string]string
+	tokens      []agent.RegistrationToken
 	failAuth    error
 	touched     int
 }
@@ -42,8 +43,14 @@ func newAgentStore(registrationToken string) *agentStore {
 	}
 }
 
-func (s *agentStore) InsertRegistrationToken(context.Context, string, []byte, time.Duration, int, string) (time.Time, error) {
-	return s.now, nil
+func (s *agentStore) InsertRegistrationToken(_ context.Context, tokenID string, _ []byte, ttl time.Duration, maxUses int, note string) (time.Time, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	expiresAt := s.now.Add(ttl)
+	s.tokens = append(s.tokens, agent.RegistrationToken{
+		TokenID: tokenID, ExpiresAt: expiresAt, MaxUses: maxUses, Note: note, CreatedAt: s.now,
+	})
+	return expiresAt, nil
 }
 
 func (s *agentStore) Register(_ context.Context, tokenHash []byte, a agent.NewAgent) (agent.Agent, error) {
@@ -112,18 +119,33 @@ func (s *agentStore) ListAgents(context.Context) ([]agent.Agent, time.Time, erro
 func (s *agentStore) RevokeAgent(_ context.Context, agentID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if a, ok := s.agents[agentID]; ok {
-		revoked := s.now
-		a.RevokedAt = &revoked
+	a, ok := s.agents[agentID]
+	if !ok {
+		return agent.ErrAgentNotFound
 	}
+	revoked := s.now
+	a.RevokedAt = &revoked
 	return nil
 }
 
 func (s *agentStore) ListRegistrationTokens(context.Context) ([]agent.RegistrationToken, time.Time, error) {
-	return nil, s.now, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]agent.RegistrationToken(nil), s.tokens...), s.now, nil
 }
 
-func (s *agentStore) RevokeRegistrationToken(context.Context, string) error { return nil }
+func (s *agentStore) RevokeRegistrationToken(_ context.Context, tokenID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.tokens {
+		if s.tokens[i].TokenID == tokenID {
+			revoked := s.now
+			s.tokens[i].RevokedAt = &revoked
+			return nil
+		}
+	}
+	return agent.ErrTokenNotFound
+}
 
 const (
 	testRegistrationToken = "test-registration-token"

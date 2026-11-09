@@ -46,8 +46,9 @@ var (
 	// ErrLegacyJob reports a backup job created before jobs named a
 	// repository. It can never run: there is no repository to hand its agent.
 	ErrLegacyJob = errors.New("job predates repository assignment")
-	// ErrBackupSetNotFound reports a set no completed backup job reported:
-	// one taken by hand outside the framework, one that failed, or a wrong ID.
+	// ErrBackupSetNotFound reports a set the framework has no usable record
+	// of: one taken by hand outside the framework, or a wrong ID. FindBackupSet
+	// also returns it for a set whose backup did not complete.
 	ErrBackupSetNotFound = errors.New("no completed backup job recorded this backup set")
 	// ErrBackupSetAmbiguous reports a set ID reported by more than one job.
 	ErrBackupSetAmbiguous = errors.New("more than one backup job recorded this backup set")
@@ -296,9 +297,35 @@ func (s *Service) Get(ctx context.Context, jobID string) (Job, *Attempt, error) 
 	return s.store.Get(ctx, jobID)
 }
 
-// List returns jobs, newest first.
-func (s *Service) List(ctx context.Context, systemID string, limit int) ([]Job, error) {
-	return s.store.List(ctx, systemID, limit)
+// List returns the jobs f selects, newest first.
+func (s *Service) List(ctx context.Context, f ListFilter) ([]Job, error) {
+	return s.store.List(ctx, f)
+}
+
+// ListBackups returns the backup history f selects, newest first. It includes
+// backups that failed or have not run yet: what a user asked for and what became
+// of it, rather than only the sets that exist.
+func (s *Service) ListBackups(ctx context.Context, f ListFilter) ([]BackupRecord, error) {
+	return s.store.ListBackups(ctx, f)
+}
+
+// GetBackup returns the backup that produced setID.
+//
+// Unlike FindBackupSet it does not require the backup to have completed: this
+// answers what became of a set, not whether it can be restored.
+func (s *Service) GetBackup(ctx context.Context, setID string) (BackupRecord, error) {
+	found, err := s.store.FindBackups(ctx, setID)
+	if err != nil {
+		return BackupRecord{}, err
+	}
+	switch len(found) {
+	case 0:
+		return BackupRecord{}, fmt.Errorf("%w: %s", ErrBackupSetNotFound, setID)
+	case 1:
+		return found[0], nil
+	default:
+		return BackupRecord{}, fmt.Errorf("%w: %s (%d jobs)", ErrBackupSetAmbiguous, setID, len(found))
+	}
 }
 
 // RequestCancel asks for a job to stop.

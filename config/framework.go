@@ -30,6 +30,10 @@ type FrameworkConfig struct {
 	// secrets kept in the database: backup repository credentials. Only the
 	// commands that read or write those secrets require it.
 	SecretKeyFile string
+	// AdminTokenFile holds the token operators and the portal authenticate to
+	// the management API with. Empty leaves that API closed: agents are served
+	// either way, and there is no unauthenticated mode.
+	AdminTokenFile string
 	// PublicURL is the address agents reach the framework at (e.g. a
 	// port-forwarded https://host:port), printed for the instance init script.
 	PublicURL string
@@ -92,6 +96,7 @@ func LoadFramework() (*FrameworkConfig, error) {
 		CertPin:         certPin,
 		DBDSN:           v.GetString("db_dsn"),
 		SecretKeyFile:   v.GetString("secret_key_file"),
+		AdminTokenFile:  v.GetString("admin_token_file"),
 		PublicURL:       v.GetString("public_url"),
 		ClaimTTL:        v.GetDuration("claim_ttl"),
 		ClaimRedelivery: v.GetDuration("claim_redelivery"),

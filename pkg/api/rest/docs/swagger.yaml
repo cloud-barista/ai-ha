@@ -1,5 +1,39 @@
 basePath: /aiha
 definitions:
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInfo:
+    properties:
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      agentVersion:
+        example: aiha-agent 0.1.0
+        type: string
+      hostname:
+        example: web01
+        type: string
+      lastSeenAt:
+        type: string
+      mode:
+        example: normal
+        type: string
+      registeredAt:
+        type: string
+      registrationTokenId:
+        description: |-
+          RegistrationTokenID is the token that enrolled the agent, which finds an
+          agent that never received its enrolment response.
+        example: 4b5c6d7e8f9a0b1c
+        type: string
+      revokedAt:
+        type: string
+      status:
+        description: Status is online, offline or revoked.
+        example: online
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInventoryReq:
     properties:
       architecture:
@@ -184,6 +218,13 @@ definitions:
     - leaseToken
     - outcome
     type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInfo'
+        type: array
+    type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentRegisterReq:
     properties:
       agentVersion:
@@ -229,6 +270,468 @@ definitions:
       systemId:
         example: 1a2b3c4d5e6f7081
         type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupAcceptedResp:
+    properties:
+      devices:
+        description: Devices are the partitions the job will capture.
+        example:
+        - /dev/nvme0n1p1
+        items:
+          type: string
+        type: array
+      expiresAt:
+        type: string
+      jobId:
+        example: 5e6f70819a0b1c2d
+        type: string
+      status:
+        example: queued
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+      warnings:
+        description: |-
+          Warnings are reasons to look twice that did not stop the request, such
+          as an inventory too old to trust.
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupInfo:
+    properties:
+      backupSetId:
+        example: 9c0d1e2f3a4b5c6d
+        type: string
+      compression:
+        example: zstd
+        type: string
+      createdAt:
+        type: string
+      devices:
+        example:
+        - /dev/nvme0n1p1
+        items:
+          type: string
+        type: array
+      finishedAt:
+        type: string
+      items:
+        description: |-
+          Items is how many backup files the set holds, and Manifest names the
+          file describing them in the repository.
+        example: 3
+        type: integer
+      jobId:
+        example: 5e6f70819a0b1c2d
+        type: string
+      manifest:
+        example: 9c0d1e2f3a4b5c6d-manifest.json
+        type: string
+      message:
+        example: Backup set 9c0d1e2f3a4b5c6d (completed, 3 item(s))
+        type: string
+      processedBytes:
+        description: ProcessedBytes is how much was uploaded, compressed.
+        example: 1048576
+        type: integer
+      repositoryId:
+        example: 3f2a9c1e6b7d4a80
+        type: string
+      requestedBy:
+        example: admin
+        type: string
+      setStatus:
+        description: |-
+          SetStatus is the set's own status as the agent reported it, which can be
+          partial when some of its items failed.
+        example: completed
+        type: string
+      startedAt:
+        type: string
+      status:
+        description: Status is the job's status.
+        example: completed
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupReq:
+    properties:
+      compression:
+        description: Compression names the codec, empty for the default.
+        enum:
+        - zstd
+        - none
+        example: zstd
+        type: string
+      devices:
+        description: |-
+          Devices are the partitions to capture. Left out, they are chosen from
+          what the system's agent reported.
+        example:
+        - /dev/nvme0n1p1
+        items:
+          type: string
+        maxItems: 128
+        type: array
+        uniqueItems: true
+      repositoryId:
+        description: RepositoryID is the ID or name of the registered repository to
+          write to.
+        example: 3f2a9c1e6b7d4a80
+        maxLength: 255
+        type: string
+    required:
+    - devices
+    - repositoryId
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupTargetsReq:
+    properties:
+      devices:
+        example:
+        - /dev/nvme0n1p1
+        items:
+          type: string
+        maxItems: 128
+        minItems: 1
+        type: array
+        uniqueItems: true
+    required:
+    - devices
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.FrameworkAccess:
+    properties:
+      certPin:
+        description: |-
+          CertPin says the agent pins the certificate named by CertSHA256, for a
+          self-signed certificate. False means it verifies the certificate against
+          its CA bundle, and CertSHA256 is empty.
+        example: true
+        type: boolean
+      certSha256:
+        example: 3911ba8d8fe5db35ae90469636dcd464c8b7aee357dc1bf9f9e6d8db3b77e81e
+        type: string
+      url:
+        example: https://framework.example.com:8443
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAApproval:
+    properties:
+      approvedBy:
+        example: operator@example.com
+        maxLength: 255
+        type: string
+      incidentId:
+        description: IncidentID links the action to the incident it answers, if any.
+        example: 7c8d9e0f1a2b3c4d
+        maxLength: 64
+        type: string
+      reason:
+        example: Planned maintenance
+        maxLength: 1024
+        type: string
+    required:
+    - approvedBy
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAEvent:
+    properties:
+      at:
+        type: string
+      from:
+        example: protected
+        type: string
+      groupId:
+        example: 6a7b8c9d0e1f2a3b
+        type: string
+      kind:
+        example: state_changed
+        type: string
+      reason:
+        example: Replication disconnected
+        type: string
+      seq:
+        example: 42
+        type: integer
+      to:
+        example: degraded
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAEventListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAEvent'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAFailoverReq:
+    properties:
+      acceptDataLoss:
+        example: false
+        type: boolean
+      approvedBy:
+        example: operator@example.com
+        maxLength: 255
+        type: string
+      confirmFenced:
+        example: true
+        type: boolean
+      incidentId:
+        description: IncidentID links the action to the incident it answers, if any.
+        example: 7c8d9e0f1a2b3c4d
+        maxLength: 64
+        type: string
+      reason:
+        example: Planned maintenance
+        maxLength: 1024
+        type: string
+    required:
+    - approvedBy
+    - confirmFenced
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo:
+    properties:
+      createdAt:
+        type: string
+      groupId:
+        example: 6a7b8c9d0e1f2a3b
+        type: string
+      name:
+        example: inference-ha
+        type: string
+      primary:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HANodeStatus'
+      reasons:
+        items:
+          type: string
+        type: array
+      resource:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAResourceSpec'
+      service:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAServiceSpec'
+      serviceAddress:
+        example: 10.0.1.20:8000
+        type: string
+      standby:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HANodeStatus'
+      state:
+        description: |-
+          State is registered, configuring, syncing, protected, degraded,
+          failover_pending, switching or error. It governs what may be done next.
+        example: protected
+        type: string
+      verdict:
+        description: |-
+          Verdict is ok, attention or error, derived anew at each evaluation, and
+          Reasons explains it. It is not State: a broken replication link is a
+          verdict of error on a group that is degraded.
+        example: ok
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupReq:
+    properties:
+      name:
+        example: inference-ha
+        maxLength: 63
+        type: string
+      primarySystemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+      resource:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAResourceSpec'
+      service:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAServiceSpec'
+      serviceAddress:
+        description: |-
+          ServiceAddress is where clients reach the service. It is recorded so
+          that a completed switch can say what to repoint.
+        example: 10.0.1.20:8000
+        maxLength: 2048
+        type: string
+      standbySystemId:
+        example: 2b3c4d5e6f708192
+        type: string
+    required:
+    - name
+    - primarySystemId
+    - standbySystemId
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HANodeStatus:
+    properties:
+      gpusSeen:
+        example: 1
+        type: integer
+      healthCode:
+        example: 200
+        type: integer
+      healthLatencyMs:
+        example: 35
+        type: integer
+      portOpen:
+        example: true
+        type: boolean
+      replication:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAReplicationStatus'
+      reportedAt:
+        type: string
+      role:
+        description: Role is primary or standby.
+        example: primary
+        type: string
+      serviceUp:
+        example: true
+        type: boolean
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAReplicationStatus:
+    properties:
+      connection:
+        example: Connected
+        type: string
+      disk:
+        example: UpToDate
+        type: string
+      error:
+        type: string
+      outOfSyncBytes:
+        example: 0
+        type: integer
+      role:
+        example: Primary
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAResourceSpec:
+    properties:
+      backingDisk:
+        example: /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_vol0123
+        maxLength: 4096
+        type: string
+      device:
+        description: |-
+          Device is what the filesystem sits on, and BackingDisk the volume holding
+          the data on each node, as a stable by-id path.
+        example: /dev/drbd0
+        maxLength: 4096
+        type: string
+      mountPoint:
+        example: /data
+        maxLength: 4096
+        type: string
+      name:
+        description: |-
+          Name identifies the replication resource. Empty has the framework issue
+          one; set, it adopts a resource that already exists.
+        example: aiha-r0
+        maxLength: 63
+        type: string
+      port:
+        example: 7789
+        maximum: 65535
+        minimum: 1
+        type: integer
+    required:
+    - backingDisk
+    - device
+    - mountPoint
+    - port
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAServiceSpec:
+    properties:
+      expectedGpus:
+        description: |-
+          ExpectedGPUs is how many accelerators each node must see. Zero skips
+          the check.
+        example: 1
+        minimum: 0
+        type: integer
+      healthPath:
+        example: /healthz
+        maxLength: 2048
+        type: string
+      port:
+        example: 8000
+        maximum: 65535
+        minimum: 1
+        type: integer
+      unit:
+        example: ai-service.service
+        maxLength: 255
+        type: string
+    required:
+    - port
+    - unit
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo:
+    properties:
+      approvedBy:
+        example: operator@example.com
+        type: string
+      dataLossAccepted:
+        example: false
+        type: boolean
+      fencingConfirmed:
+        example: false
+        type: boolean
+      finishedAt:
+        type: string
+      groupId:
+        example: 6a7b8c9d0e1f2a3b
+        type: string
+      incidentId:
+        example: 7c8d9e0f1a2b3c4d
+        type: string
+      jobIds:
+        items:
+          type: string
+        type: array
+      kind:
+        description: Kind is switchover, failover, resume or rejoin.
+        example: switchover
+        type: string
+      message:
+        type: string
+      phase:
+        example: demoting
+        type: string
+      requestedBy:
+        example: admin
+        type: string
+      startedAt:
+        type: string
+      status:
+        description: |-
+          Status is pending, running, completed or failed, and Phase the step it
+          is on.
+        example: running
+        type: string
+      transitionId:
+        example: 8d9e0f1a2b3c4d5e
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo'
+        type: array
     type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.InventoryPartition:
     properties:
@@ -292,6 +795,253 @@ definitions:
     required:
     - mountPoint
     type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.InventorySummary:
+    properties:
+      collectedAt:
+        type: string
+      complete:
+        description: |-
+          Complete is false when the agent could not account for every filesystem
+          the system needs. Backup targets are then not chosen automatically.
+        example: true
+        type: boolean
+      reportedAt:
+        type: string
+      stale:
+        description: Stale says the reading is old enough that the system may have
+          changed.
+        example: false
+        type: boolean
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobAttemptInfo:
+    properties:
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      attemptId:
+        example: 7a8b9c0d1e2f3a4b
+        type: string
+      finishedAt:
+        type: string
+      lastProgressAt:
+        type: string
+      lastSeenAt:
+        description: |-
+          LastSeenAt moves with every report and LastProgressAt only when the work
+          advanced, so an agent that is alive but stuck can be told from one that
+          is gone. LeaseExpiresAt is when the attempt loses its authority.
+        type: string
+      leaseExpiresAt:
+        type: string
+      message:
+        type: string
+      outcome:
+        description: |-
+          Outcome is completed, failed, cancelled or unknown; unknown means the
+          agent stopped reporting, which is not a confirmed failure.
+        example: completed
+        type: string
+      phase:
+        example: archiving
+        type: string
+      processedBytes:
+        description: |-
+          ProcessedBytes is how much has been handled so far. TotalUnknown says
+          there is no total to set it against: show throughput and elapsed time
+          rather than a percentage.
+        example: 1048576
+        type: integer
+      result:
+        description: Result is what the agent reported producing, recorded as reported.
+        type: object
+      totalUnknown:
+        example: true
+        type: boolean
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobInfo:
+    properties:
+      attempt:
+        allOf:
+        - $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobAttemptInfo'
+        description: |-
+          Attempt is the execution in progress or the last one. It is absent until
+          an agent claims the job, and in lists.
+      cancelRequested:
+        description: |-
+          CancelRequested says a cancel was asked for. A running job only stops
+          once its agent confirms it.
+        example: false
+        type: boolean
+      createdAt:
+        type: string
+      expiresAt:
+        type: string
+      finishedAt:
+        type: string
+      jobId:
+        example: 5e6f70819a0b1c2d
+        type: string
+      kind:
+        example: backup
+        type: string
+      message:
+        example: Backup set 9c0d1e2f3a4b5c6d (completed, 3 item(s))
+        type: string
+      requestedBy:
+        example: admin
+        type: string
+      spec:
+        description: Spec is what the agent was asked to do. It holds no credentials.
+        type: object
+      startedAt:
+        type: string
+      status:
+        description: |-
+          Status is queued, claimed, running, cancelling, completed, failed or
+          cancelled.
+        example: running
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystem:
+    properties:
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      agentStatus:
+        description: |-
+          AgentStatus is online, offline or revoked. Online says the agent is
+          reachable, not that the system's work is healthy: an agent can be alive
+          while its job is stuck.
+        example: online
+        type: string
+      agentVersion:
+        example: aiha-agent 0.1.0
+        type: string
+      hostname:
+        example: web01
+        type: string
+      lastSeenAt:
+        type: string
+      registeredAt:
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystemDetail:
+    properties:
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      agentStatus:
+        description: |-
+          AgentStatus is online, offline or revoked. Online says the agent is
+          reachable, not that the system's work is healthy: an agent can be alive
+          while its job is stuck.
+        example: online
+        type: string
+      agentVersion:
+        example: aiha-agent 0.1.0
+        type: string
+      hostname:
+        example: web01
+        type: string
+      inventory:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.InventorySummary'
+      lastSeenAt:
+        type: string
+      registeredAt:
+        type: string
+      systemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystemListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystem'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenInfo:
+    properties:
+      createdAt:
+        type: string
+      expiresAt:
+        type: string
+      maxUses:
+        example: 1
+        type: integer
+      note:
+        example: web01 rollout
+        type: string
+      revokedAt:
+        type: string
+      status:
+        description: Status is usable, used_up, expired or revoked.
+        example: usable
+        type: string
+      tokenId:
+        example: 4b5c6d7e8f9a0b1c
+        type: string
+      uses:
+        example: 0
+        type: integer
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenIssuedResp:
+    properties:
+      expiresAt:
+        type: string
+      framework:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.FrameworkAccess'
+      maxUses:
+        example: 1
+        type: integer
+      token:
+        example: <registration-token>
+        type: string
+      tokenId:
+        example: 4b5c6d7e8f9a0b1c
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenReq:
+    properties:
+      maxUses:
+        description: MaxUses is how many agents the token may enrol.
+        example: 1
+        maximum: 10000
+        minimum: 0
+        type: integer
+      note:
+        description: Note records what the token was issued for.
+        example: web01 rollout
+        maxLength: 512
+        type: string
+      ttlSeconds:
+        description: TTLSeconds is how long the token may be used to enrol, at most
+          a week.
+        example: 1800
+        maximum: 604800
+        minimum: 0
+        type: integer
+    type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryAccess:
     properties:
       accessKey:
@@ -320,6 +1070,166 @@ definitions:
         type: string
       type:
         example: s3
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryCredentialsReq:
+    properties:
+      accessKey:
+        example: <access-key>
+        maxLength: 1024
+        type: string
+      secretKey:
+        example: <secret-key>
+        maxLength: 1024
+        type: string
+      sessionToken:
+        description: |-
+          SessionToken makes the credentials temporary. It is not renewed by the
+          framework: replace the credentials when it expires.
+        example: <session-token>
+        maxLength: 4096
+        type: string
+    required:
+    - accessKey
+    - secretKey
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryInfo:
+    properties:
+      bucket:
+        example: aiha-backup
+        type: string
+      createdAt:
+        type: string
+      credentialsUpdatedAt:
+        type: string
+      endpoint:
+        example: https://storage.example.com:9000
+        type: string
+      hasSessionToken:
+        description: |-
+          HasSessionToken says whether the credentials include a session token,
+          which expires and is not renewed by the framework.
+        type: boolean
+      id:
+        example: 3f2a9c1e6b7d4a80
+        type: string
+      name:
+        example: minio-main
+        type: string
+      prefix:
+        example: prod
+        type: string
+      provider:
+        example: Minio
+        type: string
+      region:
+        example: us-east-1
+        type: string
+      type:
+        example: s3
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryReq:
+    properties:
+      accessKey:
+        example: <access-key>
+        maxLength: 1024
+        type: string
+      bucket:
+        example: aiha-backup
+        maxLength: 63
+        type: string
+      endpoint:
+        description: Endpoint is the URL of an S3-compatible service, empty for AWS.
+        example: https://storage.example.com:9000
+        maxLength: 2048
+        type: string
+      name:
+        example: minio-main
+        maxLength: 63
+        type: string
+      prefix:
+        example: prod
+        maxLength: 1024
+        type: string
+      provider:
+        description: Provider is AWS or Minio.
+        enum:
+        - AWS
+        - Minio
+        example: Minio
+        type: string
+      region:
+        description: Region is required for AWS.
+        example: us-east-1
+        maxLength: 64
+        type: string
+      secretKey:
+        example: <secret-key>
+        maxLength: 1024
+        type: string
+      sessionToken:
+        description: |-
+          SessionToken makes the credentials temporary. It is not renewed by the
+          framework: replace the credentials when it expires.
+        example: <session-token>
+        maxLength: 4096
+        type: string
+    required:
+    - accessKey
+    - bucket
+    - name
+    - provider
+    - secretKey
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryVerifyReq:
+    properties:
+      verifier:
+        description: |-
+          Verifier is who checks: "framework", or "agent:<systemId>" to learn
+          whether that agent can really write there. Only the second predicts
+          whether a backup will succeed.
+        example: agent:1a2b3c4d5e6f7081
+        type: string
+    required:
+    - verifier
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RescueAccess:
+    properties:
+      claimToken:
+        example: <claim-token>
+        type: string
+      framework:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.FrameworkAccess'
+      recoveryId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreAcceptedResp:
+    properties:
+      claimExpiresAt:
+        description: ClaimExpiresAt is when the rescue agent must have claimed the
+          job by.
+        type: string
+      rescue:
+        allOf:
+        - $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RescueAccess'
+        description: |-
+          Rescue is what a rescue instance needs to take the job on. Target
+          instances are still created by hand, so the caller has to carry these
+          into the instance's init script. It is returned only here.
+      restoreId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      status:
+        example: awaiting_agent
         type: string
     type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreClaimReq:
@@ -361,6 +1271,88 @@ definitions:
         example: 9b1c2d3e4f5a6b7c
         type: string
     type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreInfo:
+    properties:
+      bootVerification:
+        description: |-
+          BootVerification is pending while the restored system's boot waits to be
+          confirmed. Confirming it is not implemented yet, so it stays pending.
+        example: pending
+        type: string
+      claimExpiresAt:
+        type: string
+      claimedAt:
+        type: string
+      createdAt:
+        type: string
+      finishedAt:
+        type: string
+      lastProgressAt:
+        type: string
+      message:
+        example: Restored 3 partition(s) (412.5s)
+        type: string
+      progress:
+        $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreProgressInfo'
+      repositoryId:
+        example: 3f2a9c1e6b7d4a80
+        type: string
+      restoreId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      restoreOutcome:
+        description: |-
+          RestoreOutcome is how the agent said the restore ended, kept apart from
+          Status because a restored disk is not yet a system that boots.
+        example: succeeded
+        type: string
+      sourceBackupSetId:
+        example: 9c0d1e2f3a4b5c6d
+        type: string
+      sourceSystemId:
+        example: 1a2b3c4d5e6f7081
+        type: string
+      status:
+        description: Status is awaiting_agent, claimed, restoring, awaiting_boot or
+          failed.
+        example: restoring
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreListResp:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreInfo'
+        type: array
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreProgressInfo:
+    properties:
+      item:
+        description: Item is the backup file being restored, while extracting.
+        example: web01-nvme0n1p1-1a2b3c4d5e6f7081.aha
+        type: string
+      phase:
+        example: extracting
+        type: string
+      processedBytes:
+        description: |-
+          ProcessedBytes is how much has been read from the repository. TotalUnknown
+          says TotalBytes is not known yet.
+        example: 1048576
+        type: integer
+      step:
+        example: 4
+        type: integer
+      totalBytes:
+        example: 4294967296
+        type: integer
+      totalSteps:
+        example: 6
+        type: integer
+      totalUnknown:
+        example: false
+        type: boolean
+    type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreProgressReq:
     properties:
       item:
@@ -400,6 +1392,18 @@ definitions:
     - phase
     - seq
     type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreReq:
+    properties:
+      backupSetId:
+        description: |-
+          BackupSetID must be a set a backup job reported as completed. That job
+          says which system it captured and which repository holds it.
+        example: 9c0d1e2f3a4b5c6d
+        maxLength: 255
+        type: string
+    required:
+    - backupSetId
+    type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreResultReq:
     properties:
       message:
@@ -421,8 +1425,50 @@ definitions:
     type: object
   github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg:
     properties:
+      code:
+        description: |-
+          Code identifies a failure for programs to branch on; Message is for
+          people and may be reworded. The management API sets it on the failures
+          it answers itself; one turned away earlier, such as by the rate limiter,
+          has only a message and its HTTP status.
+        example: NOT_FOUND
+        type: string
       message:
         example: Service ready
+        type: string
+    type: object
+  github_com_cloud-barista_ai-ha_pkg_api_rest_model.SystemInventoryInfo:
+    properties:
+      ageSeconds:
+        description: |-
+          AgeSeconds is how long ago the agent read the system, by the framework's
+          clock.
+        example: 1200
+        type: integer
+      agentId:
+        example: 9b1c2d3e4f5a6b7c
+        type: string
+      collectedAt:
+        type: string
+      complete:
+        description: |-
+          Complete is false when the agent could not account for every filesystem
+          the system needs. Backup targets are then not chosen automatically.
+        example: true
+        type: boolean
+      report:
+        allOf:
+        - $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentInventoryReq'
+        description: Report is the inventory as the agent sent it.
+      reportedAt:
+        type: string
+      stale:
+        description: Stale says the reading is old enough that the system may have
+          changed.
+        example: false
+        type: boolean
+      systemId:
+        example: 1a2b3c4d5e6f7081
         type: string
     type: object
 info:
@@ -435,6 +1481,30 @@ info:
   title: AI-HA REST API
   version: 0.1.0
 paths:
+  /agent/health:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will take a node''s measurements
+        of its service and replication, and answer with its HA assignment. The system
+        will come from the agent''s token, never from the body.'
+      operationId: PostAgentHealth
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AgentToken: []
+      summary: Report a node's health
+      tags:
+      - '[Agent] Health'
   /agent/inventory:
     post:
       consumes:
@@ -729,6 +1799,28 @@ paths:
       summary: Enrol an agent
       tags:
       - '[Agent] Enrolment'
+  /agent/restore/{recoveryId}/boot-verify:
+    post:
+      description: 'Not implemented yet: answers 501. Will be called by the restored
+        system with a one-time boot token, enrolling it as a new system. Until then
+        a restore stops at awaiting_boot.'
+      operationId: PostRestoreBootVerify
+      parameters:
+      - description: Recovery ID injected into the rescue instance
+        in: path
+        name: recoveryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      summary: Report that a restored system booted
+      tags:
+      - '[Agent] Restore'
   /agent/restore/{recoveryId}/claim:
     post:
       consumes:
@@ -885,6 +1977,1086 @@ paths:
       summary: Report how a restore ended
       tags:
       - '[Agent] Restore'
+  /agents:
+    get:
+      description: List enrolled agents, most recently enrolled first, with when each
+        was last heard from. An agent is offline when it has not been heard from for
+        two minutes.
+      operationId: GetAgents
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.AgentListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List enrolled agents
+      tags:
+      - '[Protection] Agent Management'
+  /agents/{agentId}/revoke:
+    post:
+      description: Revoke an agent's token, which stops working on its next request.
+        Repeating this is safe. The agent keeps its local credentials, so enrolling
+        it again takes "aiha-agent reset" on the host and a new registration token.
+      operationId: PostAgentRevoke
+      parameters:
+      - description: Agent ID
+        in: path
+        name: agentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Revoke an agent's token
+      tags:
+      - '[Protection] Agent Management'
+  /backups:
+    get:
+      description: List backups across all systems, newest first, including those
+        that failed or have not run yet. A backup that failed before producing a set
+        has no backup set ID.
+      operationId: GetBackups
+      parameters:
+      - description: Only this system's backups
+        in: query
+        name: systemId
+        type: string
+      - description: Only backups in this job status
+        enum:
+        - queued
+        - claimed
+        - running
+        - cancelling
+        - completed
+        - failed
+        - cancelled
+        in: query
+        name: status
+        type: string
+      - description: Only backups requested at or after this time (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: Only backups requested before this time (RFC 3339)
+        in: query
+        name: to
+        type: string
+      - default: 50
+        description: How many to return, 1-200
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: How many to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupListResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List the backup history
+      tags:
+      - '[Protection] Backup Management'
+  /backups/{backupSetId}:
+    delete:
+      description: 'Not implemented yet: answers 501. Backup data never passes through
+        the framework, so deleting a set needs a job an agent carries out, which does
+        not exist.'
+      operationId: DeleteBackup
+      parameters:
+      - description: Backup set ID
+        in: path
+        name: backupSetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Backup set deleted
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Delete a backup set
+      tags:
+      - '[Protection] Backup Management'
+    get:
+      description: 'Return what became of a backup set. This is the framework''s record
+        of what the agent reported: whether the files are still in the repository
+        is not known here, and sizes are per set because the framework does not read
+        manifests.'
+      operationId: GetBackup
+      parameters:
+      - description: Backup set ID
+        in: path
+        name: backupSetId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get a backup by its set ID
+      tags:
+      - '[Protection] Backup Management'
+  /ha/events:
+    get:
+      description: 'Not implemented yet: answers 501. Will list state changes in sequence
+        order, so that a reader can resume from the last one it saw.'
+      operationId: GetHAEvents
+      parameters:
+      - description: Only this group's events
+        in: query
+        name: groupId
+        type: string
+      - default: 0
+        description: Only events after this sequence number
+        in: query
+        name: after
+        type: integer
+      - default: 50
+        description: How many to return, 1-200
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAEventListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List HA state changes
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups:
+    get:
+      description: 'Not implemented yet: answers 501. Will list HA groups with their
+        state, verdict and reasons.'
+      operationId: GetHAGroups
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List HA groups
+      tags:
+      - '[Redundancy] HA Group Management'
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will register two systems, the
+        volume replicated between them and the service running on it. Registering
+        configures nothing: see setup.'
+      operationId: PostHAGroup
+      parameters:
+      - description: HA group definition
+        in: body
+        name: haGroupReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Register an HA group
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}:
+    get:
+      description: 'Not implemented yet: answers 501. Will return the group''s state,
+        the verdict with its reasons, and each node''s health and replication status.'
+      operationId: GetHAGroup
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get an HA group
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/acknowledge:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. A group in error stays there
+        until an operator has dealt with the cause and says so here.'
+      operationId: PostHAGroupAcknowledge
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - description: Approval
+        in: body
+        name: haApproval
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAApproval'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Clear an HA group's error state
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/failover:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will promote the standby of
+        a group whose primary stopped answering. The framework never does this on
+        its own judgement: the caller must confirm the primary is fenced, and accept
+        any replication gap.'
+      operationId: PostHAGroupFailover
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - description: Approval and fencing confirmation
+        in: body
+        name: haFailoverReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAFailoverReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Approve an HA group's failover
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/rejoin:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will discard what the old primary
+        wrote after the switch and resynchronize it. This cannot be undone, so it
+        only ever runs on explicit request.'
+      operationId: PostHAGroupRejoin
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - description: Approval
+        in: body
+        name: haApproval
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAApproval'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Rejoin a returned node to its HA group
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/resume:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Nothing promotes automatically,
+        so a rebooted primary comes back secondary with its service stopped. This
+        will promote it again without changing roles.'
+      operationId: PostHAGroupResume
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - description: Approval
+        in: body
+        name: haApproval
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAApproval'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Resume an HA group's primary after a reboot
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/setup:
+    post:
+      description: 'Not implemented yet: answers 501. Will queue replication setup
+        on the standby and then the primary, ending in the initial synchronization.
+        Follow it by the group''s state.'
+      operationId: PostHAGroupSetup
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Configure an HA group's replication
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/switchover:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will demote the primary, and
+        only once that is confirmed promote the standby. For a planned move while
+        both nodes are healthy. Will be refused while another job runs on either node.'
+      operationId: PostHAGroupSwitchover
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - description: Approval
+        in: body
+        name: haApproval
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAApproval'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Switch an HA group to its standby
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/teardown:
+    post:
+      description: 'Not implemented yet: answers 501. Will stop and clean up replication
+        on both nodes.'
+      operationId: PostHAGroupTeardown
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HAGroupInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Remove an HA group's replication
+      tags:
+      - '[Redundancy] HA Group Management'
+  /ha/groups/{groupId}/transitions:
+    get:
+      description: 'Not implemented yet: answers 501. Will list the group''s switches
+        and recoveries, with who approved each and whether fencing was confirmed.'
+      operationId: GetHAGroupTransitions
+      parameters:
+      - description: HA group ID
+        in: path
+        name: groupId
+        required: true
+        type: string
+      - default: 50
+        description: How many to return, 1-200
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: How many to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.HATransitionListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List an HA group's transitions
+      tags:
+      - '[Redundancy] HA Group Management'
+  /history:
+    get:
+      description: 'Not implemented yet: answers 501. Will list redundancy, switch,
+        backup and restore work and incidents in one timeline (SFR-HA-07).'
+      operationId: GetHistory
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List the integrated history
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents:
+    get:
+      description: 'Not implemented yet: answers 501. Will list incidents by target,
+        type and period.'
+      operationId: GetIncidents
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List incidents
+      tags:
+      - '[Diagnosis] Incident Management'
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Will record an incident on behalf
+        of the HA support agent.'
+      operationId: PostIncident
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Record an incident
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents/{incidentId}:
+    get:
+      description: 'Not implemented yet: answers 501. Will return an incident''s events,
+        diagnoses, alarms and actions.'
+      operationId: GetIncident
+      parameters:
+      - description: Incident ID
+        in: path
+        name: incidentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get an incident
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents/{incidentId}/actions:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Actions will refer to the switch
+        or restore job they caused rather than copy its history.'
+      operationId: PostIncidentAction
+      parameters:
+      - description: Incident ID
+        in: path
+        name: incidentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Record an incident action
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents/{incidentId}/alarms:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501.'
+      operationId: PostIncidentAlarm
+      parameters:
+      - description: Incident ID
+        in: path
+        name: incidentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Record an incident alarm
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents/{incidentId}/diagnoses:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Diagnoses will accumulate rather
+        than replace one another, so it stays visible which one an action was approved
+        on.'
+      operationId: PostIncidentDiagnosis
+      parameters:
+      - description: Incident ID
+        in: path
+        name: incidentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Record an incident diagnosis
+      tags:
+      - '[Diagnosis] Incident Management'
+  /incidents/{incidentId}/events:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501.'
+      operationId: PostIncidentEvent
+      parameters:
+      - description: Incident ID
+        in: path
+        name: incidentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Record an incident event
+      tags:
+      - '[Diagnosis] Incident Management'
+  /jobs:
+    get:
+      description: 'List jobs, newest first. Restores have their own list at /restores:
+        a rescue agent is not an enrolled system, so they are not in this queue.'
+      operationId: GetJobs
+      parameters:
+      - description: Only this system's jobs
+        in: query
+        name: systemId
+        type: string
+      - description: Only jobs of this kind
+        enum:
+        - backup
+        in: query
+        name: kind
+        type: string
+      - description: Only jobs in this status
+        enum:
+        - queued
+        - claimed
+        - running
+        - cancelling
+        - completed
+        - failed
+        - cancelled
+        in: query
+        name: status
+        type: string
+      - description: Only jobs created at or after this time (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: Only jobs created before this time (RFC 3339)
+        in: query
+        name: to
+        type: string
+      - default: 50
+        description: How many to return, 1-200
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: How many to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobListResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List jobs
+      tags:
+      - '[Protection] Job Management'
+  /jobs/{jobId}:
+    get:
+      description: 'Return a job and the attempt carrying it out. LastSeenAt and LastProgressAt
+        are separate on purpose: an agent that is seen but not progressing is alive
+        and stuck, while one that is not seen has lost contact.'
+      operationId: GetJob
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get a job
+      tags:
+      - '[Protection] Job Management'
+  /jobs/{jobId}/cancel:
+    post:
+      description: 'A job still queued is cancelled at once (200). A job an agent
+        is running is only marked (202): the agent learns of it on its next report
+        and has to confirm it stopped, and until then the job stays cancelling. Repeating
+        a cancel is safe. A job that already ended any other way is refused.'
+      operationId: PostJobCancel
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Cancelled
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobInfo'
+        "202":
+          description: Waiting for the agent to stop
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.JobInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Ask a job to stop
+      tags:
+      - '[Protection] Job Management'
   /readyz:
     get:
       description: Report whether the AI-HA framework has completed initialization
@@ -904,6 +3076,484 @@ paths:
       summary: Check whether the framework is ready
       tags:
       - '[Admin] System Management'
+  /registration-tokens:
+    get:
+      description: List issued registration tokens and what is left of them. The tokens
+        themselves are not stored and cannot be listed.
+      operationId: GetRegistrationTokens
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List registration tokens
+      tags:
+      - '[Protection] Agent Management'
+    post:
+      consumes:
+      - application/json
+      description: 'Issue a token that lets an agent enrol, with the settings the
+        agent needs to reach this framework. It authorizes enrolment and nothing else.
+        The token is returned only here and cannot be recovered: if an agent never
+        receives its credentials, revoke the incomplete agent and issue a new one.
+        An empty request issues a token good for one enrolment within 30 minutes.'
+      operationId: PostRegistrationToken
+      parameters:
+      - description: Token limits
+        in: body
+        name: registrationTokenReq
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RegistrationTokenIssuedResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Issue a registration token
+      tags:
+      - '[Protection] Agent Management'
+  /registration-tokens/{tokenId}/revoke:
+    post:
+      description: Revoke a registration token so that it can enrol nothing further.
+        Agents it already enrolled are unaffected. Repeating this is safe.
+      operationId: PostRegistrationTokenRevoke
+      parameters:
+      - description: Registration token ID
+        in: path
+        name: tokenId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Revoke a registration token
+      tags:
+      - '[Protection] Agent Management'
+  /repositories:
+    get:
+      description: List the registered repositories, by name. Credentials are never
+        returned.
+      operationId: GetRepositories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List backup repositories
+      tags:
+      - '[Protection] Repository Management'
+    post:
+      consumes:
+      - application/json
+      description: 'Register an S3 repository (AWS or MinIO) that backups can write
+        to. The credentials are stored encrypted, and an agent receives them only
+        with a job it has claimed. The location cannot be changed afterwards: register
+        a new repository for a new location. Whether the repository can be reached
+        is not checked here.'
+      operationId: PostRepository
+      parameters:
+      - description: Repository to register
+        in: body
+        name: repositoryReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              description: The repository's address
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Register a backup repository
+      tags:
+      - '[Protection] Repository Management'
+  /repositories/{repoId}:
+    get:
+      description: Return a registered repository, without its credentials.
+      operationId: GetRepository
+      parameters:
+      - description: Repository ID or name
+        in: path
+        name: repoId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get a backup repository
+      tags:
+      - '[Protection] Repository Management'
+  /repositories/{repoId}/credentials:
+    put:
+      consumes:
+      - application/json
+      description: Replace a repository's credentials, keeping its ID and location,
+        so jobs and backup sets that name it stay valid. The old credentials are not
+        read, which also recovers a repository whose secret key was lost.
+      operationId: PutRepositoryCredentials
+      parameters:
+      - description: Repository ID or name
+        in: path
+        name: repoId
+        required: true
+        type: string
+      - description: New credentials
+        in: body
+        name: repositoryCredentialsReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryCredentialsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryInfo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Replace a repository's credentials
+      tags:
+      - '[Protection] Repository Management'
+  /repositories/{repoId}/verify:
+    post:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. A check from the framework says
+        nothing about whether an agent inside a customer network can write there,
+        so a real answer needs a job an agent carries out.'
+      operationId: PostRepositoryVerify
+      parameters:
+      - description: Repository ID or name
+        in: path
+        name: repoId
+        required: true
+        type: string
+      - description: Who checks
+        in: body
+        name: repositoryVerifyReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RepositoryVerifyReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Check that a repository can be reached
+      tags:
+      - '[Protection] Repository Management'
+  /restores:
+    get:
+      description: List restore jobs, newest first.
+      operationId: GetRestores
+      parameters:
+      - description: Only restores of this source system
+        in: query
+        name: systemId
+        type: string
+      - description: Only restores of this backup set
+        in: query
+        name: backupSetId
+        type: string
+      - description: Only restores in this status
+        enum:
+        - awaiting_agent
+        - claimed
+        - restoring
+        - awaiting_boot
+        - failed
+        in: query
+        name: status
+        type: string
+      - description: Only restores requested at or after this time (RFC 3339)
+        in: query
+        name: from
+        type: string
+      - description: Only restores requested before this time (RFC 3339)
+        in: query
+        name: to
+        type: string
+      - default: 50
+        description: How many to return, 1-200
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: How many to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreListResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List the restore history
+      tags:
+      - '[Protection] Restore Management'
+    post:
+      consumes:
+      - application/json
+      description: 'Register a restore job for a backup set and return at once: follow
+        it at the address in the Location header. The set must be one a backup job
+        reported as completed; that job says which system it captured and which repository
+        holds it. Target instances are still created by hand, so the response carries,
+        this once, what the instance''s init script needs, including its claim token.
+        "Completed" is what the agent reported: whether the files are still in the
+        repository is found out by the rescue agent. Requests are not deduplicated
+        yet: repeating one registers another job.'
+      operationId: PostRestore
+      parameters:
+      - description: Restore request
+        in: body
+        name: restoreReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          headers:
+            Location:
+              description: Where to follow the restore
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreAcceptedResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Request a restore
+      tags:
+      - '[Protection] Restore Management'
+  /restores/{restoreId}:
+    get:
+      description: Return a restore's status, the step its rescue agent is on and
+        how much of the backup files it has read. A status of awaiting_boot means
+        the disk was restored; the restored system's boot has not been confirmed.
+      operationId: GetRestore
+      parameters:
+      - description: Restore ID
+        in: path
+        name: restoreId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get a restore
+      tags:
+      - '[Protection] Restore Management'
+  /restores/{restoreId}/cancel:
+    post:
+      description: 'Not implemented yet: answers 501. A rescue agent has no path to
+        receive a cancel, and past formatting a stopped restore does not return the
+        disk to its earlier state.'
+      operationId: PostRestoreCancel
+      parameters:
+      - description: Restore ID
+        in: path
+        name: restoreId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.RestoreInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Ask a restore to stop
+      tags:
+      - '[Protection] Restore Management'
   /swagger.json:
     get:
       description: Return the generated OpenAPI (Swagger) document describing this
@@ -919,4 +3569,250 @@ paths:
       summary: Get the OpenAPI specification
       tags:
       - '[Admin] System Management'
+  /systems:
+    get:
+      description: List the systems an agent has enrolled for, most recently enrolled
+        first, with the state of the agent speaking for each. An online agent is reachable;
+        that does not say its work is healthy.
+      operationId: GetSystems
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystemListResp'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: List protected systems
+      tags:
+      - '[Protection] System Management'
+  /systems/{systemId}:
+    get:
+      description: Return one protected system and how current its inventory is. The
+        inventory is absent until the agent first reports.
+      operationId: GetSystem
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.ProtectedSystemDetail'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get a protected system
+      tags:
+      - '[Protection] System Management'
+  /systems/{systemId}/backups:
+    post:
+      consumes:
+      - application/json
+      description: 'Queue a backup job for the system''s agent and return at once:
+        follow the job at the address in the Location header. With no devices the
+        partitions are chosen from what the agent reported; a system whose report
+        is missing or incomplete is refused, because a set chosen from it could leave
+        out a filesystem the system needs, and only the restore would show it. Named
+        devices are checked against the same report. If there is no report yet they
+        are accepted unchecked, with a warning, and the agent checks them before it
+        writes. Requests are not deduplicated yet: repeating one queues another job.'
+      operationId: PostSystemBackup
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Backup request
+        in: body
+        name: backupReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupReq'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          headers:
+            Location:
+              description: Where to follow the job
+              type: string
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupAcceptedResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Request a backup of a system
+      tags:
+      - '[Protection] Backup Management'
+  /systems/{systemId}/inventory:
+    get:
+      description: 'Return what the system''s agent last reported. The framework cannot
+        read a system itself, so this is always a past reading: check when it was
+        collected before relying on it.'
+      operationId: GetSystemInventory
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SystemInventoryInfo'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Get what a system is made of
+      tags:
+      - '[Protection] System Management'
+  /systems/{systemId}/inventory/refresh:
+    post:
+      description: 'Not implemented yet: answers 501. Agents report on startup and
+        periodically, and no job kind carries this request to them.'
+      operationId: PostSystemInventoryRefresh
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Ask a system's agent to report its inventory again
+      tags:
+      - '[Protection] System Management'
+  /systems/{systemId}/targets:
+    put:
+      consumes:
+      - application/json
+      description: 'Not implemented yet: answers 501. Targets are chosen per backup
+        request, from the inventory or by name.'
+      operationId: PutSystemTargets
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Backup targets
+        in: body
+        name: backupTargetsReq
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.BackupTargetsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+        "501":
+          description: Not Implemented
+          schema:
+            $ref: '#/definitions/github_com_cloud-barista_ai-ha_pkg_api_rest_model.SimpleMsg'
+      security:
+      - AdminToken: []
+      summary: Set what a system's backups capture
+      tags:
+      - '[Protection] System Management'
+securityDefinitions:
+  AdminToken:
+    description: Management API token, as "Bearer <token>". It is the file named by
+      AIHA_FRAMEWORK_ADMIN_TOKEN_FILE.
+    in: header
+    name: Authorization
+    type: apiKey
+  AgentToken:
+    description: The agent's own token, as "Bearer <token>", issued at enrolment.
+    in: header
+    name: Authorization
+    type: apiKey
+  RestoreReportToken:
+    description: The rescue agent's report token, as "Bearer <token>", issued in the
+      claim response.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

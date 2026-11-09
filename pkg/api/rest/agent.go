@@ -115,6 +115,21 @@ func registerFailure(err error) (int, string) {
 	}
 }
 
+// RestPostAgentHealth godoc
+// @ID PostAgentHealth
+// @Summary Report a node's health
+// @Description Not implemented yet: answers 501. Will take a node's measurements of its service and replication, and answer with its HA assignment. The system will come from the agent's token, never from the body.
+// @Tags [Agent] Health
+// @Accept json
+// @Produce json
+// @Failure 401 {object} model.SimpleMsg
+// @Failure 501 {object} model.SimpleMsg
+// @Security AgentToken
+// @Router /agent/health [post]
+func RestPostAgentHealth(c echo.Context) error {
+	return notImplemented(c)
+}
+
 // RestGetAgentJobs godoc
 // @ID GetAgentJobs
 // @Summary Wait for work

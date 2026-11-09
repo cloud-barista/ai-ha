@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -75,6 +76,69 @@ func (s *PGStore) Get(ctx context.Context, recoveryID string) (Job, time.Time, e
 func (s *PGStore) Lookup(ctx context.Context, id string) (Job, error) {
 	job, _, err := scanJob(s.pool.QueryRow(ctx, lookupSQL, id))
 	return job, err
+}
+
+// defaultListLimit is how many jobs a list returns unless told otherwise.
+const defaultListLimit = 50
+
+// listSQL builds the query for f. The conditions are fixed strings and every
+// value travels as a parameter.
+func listSQL(f ListFilter) (string, []any) {
+	limit := f.Limit
+	if limit <= 0 {
+		limit = defaultListLimit
+	}
+	args := []any{limit, f.Offset}
+	var where []string
+	add := func(condition string, value any) {
+		args = append(args, value)
+		where = append(where, fmt.Sprintf(condition, len(args)))
+	}
+	if f.Status != "" {
+		add("status = $%d", string(f.Status))
+	}
+	if f.SystemID != "" {
+		add("plan->>'sourceSystemId' = $%d", f.SystemID)
+	}
+	if f.BackupSetID != "" {
+		add("plan->>'sourceBackupSetId' = $%d", f.BackupSetID)
+	}
+	if !f.From.IsZero() {
+		add("created_at >= $%d", f.From)
+	}
+	if !f.To.IsZero() {
+		add("created_at < $%d", f.To)
+	}
+
+	q := `SELECT ` + jobColumns + ` FROM restore_jobs`
+	if len(where) > 0 {
+		q += ` WHERE ` + strings.Join(where, " AND ")
+	}
+	// restore_id breaks ties, so that paging neither repeats nor skips a job.
+	return q + ` ORDER BY created_at DESC, restore_id LIMIT $1 OFFSET $2`, args
+}
+
+// List implements Store.
+func (s *PGStore) List(ctx context.Context, f ListFilter) ([]Job, error) {
+	q, args := listSQL(f)
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list restore jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Job
+	for rows.Next() {
+		job, _, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, job)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list restore jobs: %w", err)
+	}
+	return out, nil
 }
 
 // scanJob reads a row selected with jobColumns.

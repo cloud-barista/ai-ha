@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"time"
 )
 
 // RestoreClaimReq is sent by a rescue agent to claim a restore job.
@@ -73,6 +74,77 @@ type RestoreResultReq struct {
 	// Phase is the step the restore ended in.
 	Phase   string `json:"phase,omitempty"   example:"bootloader"`
 	Message string `json:"message,omitempty" example:"Restored 3 partition(s) (412.5s)"`
+}
+
+// RestoreReq asks for a backup set to be restored.
+type RestoreReq struct {
+	// BackupSetID must be a set a backup job reported as completed. That job
+	// says which system it captured and which repository holds it.
+	BackupSetID string `json:"backupSetId" validate:"required,max=255" example:"9c0d1e2f3a4b5c6d"`
+}
+
+// RestoreAcceptedResp acknowledges a restore request.
+type RestoreAcceptedResp struct {
+	RestoreID string `json:"restoreId" example:"9b1c2d3e4f5a6b7c"`
+	Status    string `json:"status"    example:"awaiting_agent"`
+	// ClaimExpiresAt is when the rescue agent must have claimed the job by.
+	ClaimExpiresAt time.Time `json:"claimExpiresAt"`
+	// Rescue is what a rescue instance needs to take the job on. Target
+	// instances are still created by hand, so the caller has to carry these
+	// into the instance's init script. It is returned only here.
+	Rescue RescueAccess `json:"rescue"`
+}
+
+// RescueAccess is what a rescue instance is started with: the variables of
+// sh/aiha-init.sh. The claim token is a secret, and the framework keeps only
+// its hash.
+type RescueAccess struct {
+	RecoveryID string          `json:"recoveryId" example:"1a2b3c4d5e6f7081"`
+	ClaimToken string          `json:"claimToken" example:"<claim-token>"`
+	Framework  FrameworkAccess `json:"framework"`
+}
+
+// RestoreProgressInfo is where a restore has got to. It is reported as steps
+// and bytes rather than a percentage.
+type RestoreProgressInfo struct {
+	Phase      string `json:"phase,omitempty" example:"extracting"`
+	Step       int    `json:"step"            example:"4"`
+	TotalSteps int    `json:"totalSteps"      example:"6"`
+	// Item is the backup file being restored, while extracting.
+	Item string `json:"item,omitempty" example:"web01-nvme0n1p1-1a2b3c4d5e6f7081.aha"`
+	// ProcessedBytes is how much has been read from the repository. TotalUnknown
+	// says TotalBytes is not known yet.
+	ProcessedBytes int64 `json:"processedBytes" example:"1048576"`
+	TotalBytes     int64 `json:"totalBytes"     example:"4294967296"`
+	TotalUnknown   bool  `json:"totalUnknown"   example:"false"`
+}
+
+// RestoreInfo is a restore job as a caller follows it.
+type RestoreInfo struct {
+	RestoreID string `json:"restoreId" example:"9b1c2d3e4f5a6b7c"`
+	// Status is awaiting_agent, claimed, restoring, awaiting_boot or failed.
+	Status            string `json:"status"                 example:"restoring"`
+	SourceSystemID    string `json:"sourceSystemId"         example:"1a2b3c4d5e6f7081"`
+	SourceBackupSetID string `json:"sourceBackupSetId"      example:"9c0d1e2f3a4b5c6d"`
+	RepositoryID      string `json:"repositoryId,omitempty" example:"3f2a9c1e6b7d4a80"`
+	// RestoreOutcome is how the agent said the restore ended, kept apart from
+	// Status because a restored disk is not yet a system that boots.
+	RestoreOutcome string `json:"restoreOutcome,omitempty" example:"succeeded"`
+	// BootVerification is pending while the restored system's boot waits to be
+	// confirmed. Confirming it is not implemented yet, so it stays pending.
+	BootVerification string               `json:"bootVerification,omitempty" example:"pending"`
+	Progress         *RestoreProgressInfo `json:"progress,omitempty"`
+	LastProgressAt   *time.Time           `json:"lastProgressAt,omitempty"`
+	Message          string               `json:"message,omitempty" example:"Restored 3 partition(s) (412.5s)"`
+	CreatedAt        time.Time            `json:"createdAt"`
+	ClaimExpiresAt   time.Time            `json:"claimExpiresAt"`
+	ClaimedAt        *time.Time           `json:"claimedAt,omitempty"`
+	FinishedAt       *time.Time           `json:"finishedAt,omitempty"`
+}
+
+// RestoreListResp lists restore jobs.
+type RestoreListResp struct {
+	Items []RestoreInfo `json:"items"`
 }
 
 // RepositoryAccess is the connection information for the backup repository

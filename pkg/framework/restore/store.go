@@ -25,6 +25,15 @@ const (
 	StatusFailed Status = "failed"
 )
 
+// Known reports whether s is a status a job can have.
+func (s Status) Known() bool {
+	switch s {
+	case StatusAwaitingAgent, StatusClaimed, StatusRestoring, StatusAwaitingBoot, StatusFailed:
+		return true
+	}
+	return false
+}
+
 // active reports whether a job in status s still accepts reports from its agent.
 func (s Status) active() bool {
 	return s == StatusClaimed || s == StatusRestoring
@@ -88,6 +97,20 @@ type Job struct {
 	CreatedAt  time.Time
 }
 
+// ListFilter narrows a list of restore jobs. A zero field does not filter.
+type ListFilter struct {
+	Status Status
+	// SystemID and BackupSetID select by what the job restores.
+	SystemID    string
+	BackupSetID string
+	// From and To bound the creation time, From inclusive and To exclusive.
+	From time.Time
+	To   time.Time
+	// Limit defaults to defaultListLimit. Offset skips that many jobs.
+	Limit  int
+	Offset int
+}
+
 // Store persists restore jobs. All time comparisons use the store's clock.
 type Store interface {
 	// Insert stores a new job awaiting its agent, whose claim window closes ttl
@@ -121,4 +144,6 @@ type Store interface {
 	// ErrNotFound. Both are random 16-digit hex values, so one cannot be
 	// mistaken for the other.
 	Lookup(ctx context.Context, id string) (Job, error)
+	// List returns the jobs f selects, newest first.
+	List(ctx context.Context, f ListFilter) ([]Job, error)
 }

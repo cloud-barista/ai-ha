@@ -178,6 +178,19 @@ func (h *restoreHandler) RestPostRestoreResult(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// RestPostRestoreBootVerify godoc
+// @ID PostRestoreBootVerify
+// @Summary Report that a restored system booted
+// @Description Not implemented yet: answers 501. Will be called by the restored system with a one-time boot token, enrolling it as a new system. Until then a restore stops at awaiting_boot.
+// @Tags [Agent] Restore
+// @Produce json
+// @Param recoveryId path string true "Recovery ID injected into the rescue instance"
+// @Failure 501 {object} model.SimpleMsg
+// @Router /agent/restore/{recoveryId}/boot-verify [post]
+func RestPostRestoreBootVerify(c echo.Context) error {
+	return notImplemented(c)
+}
+
 // reportFailure answers a refused progress or result report. Neither the
 // report token nor the request body is logged.
 func reportFailure(c echo.Context, err error, recoveryID, logMsg string) error {
